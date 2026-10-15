@@ -324,8 +324,12 @@ the TUI in a pseudo-terminal (`github.com/creack/pty`, a test-only dependency).
   lone file auto-starts and reaches "All done!" writing `out_clip.mp4`; in a
   directory of three, space/j/space/enter encodes the two selected and leaves
   the third alone; `q` quits the picker. Each run then quits with `q`, exit 0.
-- **Untested**: `--overwrite` replacing sources; cancelling with `c` leaving no
-  partial output; SIGTERM/SIGINT restoring the terminal, stopping ffmpeg and
-  removing partial outputs (`waitWorkers`).
+  `TestTUICancel` (`tui_cancel_e2e_test.go`) stops a 60s noise clip once its
+  progress shows: `c` drops back to the picker with no `out_` file left, and
+  under `--overwrite` with the source unchanged and no `.fideo-tmp` file;
+  SIGTERM, SIGINT and SIGHUP exit 0 after showing the cursor and turning off
+  bracketed paste, with the ffmpeg child (found by its PID) gone and no
+  partial `out_` file (`waitWorkers`).
+- **Untested**: `--overwrite` completing a replacement through the TUI.
 - **Tickets**: fideo-atq.19 (pty harness, happy paths), fideo-atq.20 (cancel
   and signals).

@@ -156,6 +156,8 @@ Tests live beside the code in `internal/fideo` (white-box, `package fideo`).
   `tui_e2e_test.go` builds `./cmd/fideo` and drives the TUI in a fixed-size
   pseudo-terminal (`github.com/creack/pty`): it waits on drawn text with a
   deadline, types keys, and checks the `out_` files and the exit code.
+  `tui_cancel_e2e_test.go` stops an encode mid-way with `c` or a signal and
+  checks the cleanup: no partial output, no ffmpeg child, terminal restored.
 
 - **Local Linux reproduction** — `docker build -f Dockerfile.test -t fideo-test .`
   then `docker run --rm fideo-test`. Runs vet + unit + integration on Linux with
