@@ -222,7 +222,7 @@ drives the TUI through a pseudo-terminal.
 ## The file picker and batch (TUI state)
 
 - **Reached by**: the TUI: arrows/`j`/`k`, PgUp/PgDn, Home/End/`g`/`G`,
-  `space` select, `a` all, `enter` start, `c`/`ctrl+c` cancel, `q`/`esc` quit;
+  `space` select, `a` select/deselect all, `enter` start, `c`/`ctrl+c` cancel, `q`/`esc` quit;
   messages from the workers. Code: `handlers.go`, `model.go` (`Update`,
   `dispatch`).
 - **Tests** (unit): `fixes_test.go` `TestFillSlotsSkipsLaunchedFile`,
@@ -241,9 +241,12 @@ drives the TUI through a pseudo-terminal.
   `TestErrorForLaunchingFileKeepsProcessingCount`, `TestCancelResetsFile`
   (processing and launching files), `TestCancelSettlesOnLastWorker`,
   `TestInfoMessagesSetFields`, `TestSpinnerTick`, `TestAutoStartStartsProcessing`.
+  `select_all_test.go` `TestSelectAllKey` (`a` selects or deselects every
+  pending file without starting), `TestSelectAllThenEnterStartsBatch`,
+  `TestSelectAllIgnoredWhileProcessing`.
 - **Untested**:
   - Keys while idle: `space` toggling selection and dropping the output claim,
-    `a` selecting every pending file, `enter` starting, `q`/`esc`/`ctrl+c`
+    `enter` starting, `q`/`esc`/`ctrl+c`
     quitting only when idle, `c` cancelling several in-flight encodes (one
     is covered by `TestProcessingStartUnderCancelKeepsSlot`).
   - Launching work: `startFile` calls `model.launch` (nil means

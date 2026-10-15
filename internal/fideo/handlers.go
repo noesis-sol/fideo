@@ -465,18 +465,33 @@ func (m model) handleKeyPress(msg tea.KeyMsg) (model, tea.Cmd) {
 			m.files[m.cursor].outPath = ""
 		}
 	case "a":
-		for i := range m.files {
-			if m.files[i].status == statusPending {
-				m.files[i].selected = true
-			}
-		}
-		cmd := m.startProcessing()
-		return m, cmd
+		m.toggleAllPending()
 	case "enter":
 		cmd := m.startProcessing()
 		return m, cmd
 	}
 	return m, nil
+}
+
+// toggleAllPending selects every pending file, or deselects them all when every
+// one is already selected. It only selects: enter starts the batch, so the
+// selection can be reviewed first (with --overwrite, a batch replaces sources).
+func (m *model) toggleAllPending() {
+	all := true
+	for _, f := range m.files {
+		if f.status == statusPending && !f.selected {
+			all = false
+			break
+		}
+	}
+	for i := range m.files {
+		if m.files[i].status != statusPending {
+			continue
+		}
+		m.files[i].selected = !all
+		// As with space: drop any stale output-name claim.
+		m.files[i].outPath = ""
+	}
 }
 
 // handleOverwritePromptKey handles input while the overwrite confirmation dialog

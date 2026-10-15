@@ -183,7 +183,7 @@ The flag works in any position and can be combined with directories, file paths,
 | `↑` / `↓` or `k` / `j` | Navigate through video list |
 | `PgUp` / `PgDn`, `Home` / `End` (`g` / `G`) | Jump through long lists (works while a batch is running) |
 | `Space` | Toggle selection of current video |
-| `a` | Select all videos and start processing |
+| `a` | Select all pending videos (again to deselect them); `Enter` starts |
 | `Enter` | Start processing selected videos |
 | `c` or `Ctrl+C` | Cancel current processing |
 | `q` | Quit (when not processing) |
