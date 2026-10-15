@@ -286,11 +286,14 @@ drives the TUI through a pseudo-terminal.
 - **Reached by**: running `fideo` (with a valid command line) on a machine
   without ffmpeg or ffprobe. Code: `checkDependencies` in `app.go`;
   `errorui.go`.
-- **Tests**: none.
-- **Untested**: `errorModel.Update` (`q`/`esc`/`ctrl+c` quit, `c`/`enter`
-  start the copy, a clipboard result marking copied or showing its error);
-  `errorModel.View` in its three states; `getInstallCommand` per OS (it reads
-  `runtime.GOOS` and `exec.LookPath` directly); `copyToClipboard`.
+- **Tests** (unit): `errorui_test.go` `TestGetInstallCommand` (darwin,
+  windows, an unknown OS, linux with apt, with dnf, with neither; the OS and
+  PATH lookup are parameters), `TestErrorModelQuitKeys` (`q`/`esc`/`ctrl+c`),
+  `TestErrorModelCopyKeys` (`c`/`enter` start the copy),
+  `TestErrorModelOtherKeysIgnored`, `TestErrorModelClipboardResult` (copied, or
+  its error), `TestErrorModelView` (its three states).
+- **Untested**: `copyToClipboard` (it reads `runtime.GOOS` and `exec.LookPath`
+  directly and runs the real clipboard tool).
 
 - **Tickets**: fideo-atq.18.
 

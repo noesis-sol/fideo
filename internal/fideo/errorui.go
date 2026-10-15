@@ -37,14 +37,17 @@ var (
 				Padding(0, 2)
 )
 
-func getInstallCommand() (osName, command string) {
-	switch runtime.GOOS {
+// getInstallCommand names the platform and its ffmpeg install command. The
+// target OS and the PATH lookup are parameters (production passes runtime.GOOS
+// and exec.LookPath) so every branch is unit-testable on one host.
+func getInstallCommand(goos string, lookPath func(string) (string, error)) (osName, command string) {
+	switch goos {
 	case "darwin":
 		return "macOS", "brew install ffmpeg"
 	case "linux":
-		if _, err := exec.LookPath("apt"); err == nil {
+		if _, err := lookPath("apt"); err == nil {
 			return "Ubuntu/Debian", "sudo apt install ffmpeg"
-		} else if _, err := exec.LookPath("dnf"); err == nil {
+		} else if _, err := lookPath("dnf"); err == nil {
 			return "Fedora", "sudo dnf install ffmpeg"
 		}
 		return "Linux", "sudo apt install ffmpeg  # or use your package manager"
@@ -106,7 +109,7 @@ type errorModel struct {
 }
 
 func newErrorModel() errorModel {
-	osName, command := getInstallCommand()
+	osName, command := getInstallCommand(runtime.GOOS, exec.LookPath)
 	return errorModel{osName: osName, command: command}
 }
 
