@@ -193,7 +193,8 @@ encode.go (`ffmpegArgs` / `profileFor`).
   destination, which is atomically renamed over the original on success (and the
   original removed if `--format` changed its extension). Before the rename the
   scratch file takes the source's permission bits and access/modification times
-  (`copyFileAttrs`), so a private `0600` clip isn't republished world-readable. When the destination is
+  (`copyFileAttrs`), so a private `0600` clip isn't republished world-readable; the scratch file
+  itself is pre-created owner-only (`createScratch`), so it isn't readable by others mid-encode either. When the destination is
   the source itself and the re-encode is no smaller than it, the scratch file is
   discarded and the original kept, with a note on its row (`finishInPlace`); a
   `--format` conversion is applied whatever its size. A bare `--overwrite` keeps

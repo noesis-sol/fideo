@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -117,6 +118,25 @@ func tempOutputPath(dest, source string) string {
 	return filepath.Join(dir, "."+stem+"."+srcTag+tempOutputMarker+ext)
 }
 
+// createScratch creates the in-place scratch file tmp, empty and readable only
+// by its owner, before ffmpeg starts. Left to ffmpeg it would be created with the
+// default umask (typically 0644), so a private 0600 source's re-encoded contents
+// would be readable by other users for the whole encode, until finishInPlace
+// gives it the source's mode. ffmpeg -y truncates the file but keeps its mode.
+// Any stale file at tmp (a crashed run's leftover, or a planted symlink) is
+// removed first and the new one created exclusively, so ffmpeg never writes
+// through a file it did not get from here.
+func createScratch(tmp string) error {
+	if err := os.Remove(tmp); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return err
+	}
+	return f.Close()
+}
+
 // finishInPlace completes an in-place encode once ffmpeg has written tmp: it
 // renames tmp over dest and, when a format change moved the file to a new name
 // (clip.mov -> clip.mp4), removes the original src so it is replaced rather than
@@ -153,9 +173,9 @@ func finishInPlace(tmp, dest, src string) (note string, err error) {
 }
 
 // copyFileAttrs gives dst the permission bits and access/modification times of
-// src. The rename in finishInPlace swaps in ffmpeg's freshly created file, so
-// without this a 0600 source would come back as 0644 (readable by others) and
-// lose its original mtime. The mode is required — failing to restrict it would
+// src. The rename in finishInPlace swaps in the scratch file createScratch made
+// owner-only, so without this a 0644 source would come back as 0600 and any
+// source would lose its original mtime. The mode is required — failing to restrict it would
 // widen access — while the times are best-effort, as some filesystems refuse
 // them.
 func copyFileAttrs(src, dst string) error {
@@ -803,9 +823,13 @@ func (m model) processFile(idx int, ctx context.Context, cancel context.CancelFu
 		// emit a clean cancelMsg (matching the post-Wait path) instead of marking
 		// the file as a hard error with a confusing "context canceled" message.
 		// output is removed best-effort — a no-op if ffmpeg never created it.
+		// An in-place run's scratch temp is removed on any failure, since
+		// createScratch makes it before ffmpeg starts.
 		reportFailure := func(err error) {
-			if ctx.Err() != nil {
+			if ctx.Err() != nil || inPlace {
 				_ = os.Remove(output)
+			}
+			if ctx.Err() != nil {
 				vs.send(cancelMsg{idx: idx})
 				return
 			}
@@ -819,6 +843,12 @@ func (m model) processFile(idx int, ctx context.Context, cancel context.CancelFu
 		}
 		vs.send(videoInfoMsg{idx: idx, info: vs.formatVideoInfo(path, meta)})
 
+		if inPlace {
+			if err := createScratch(output); err != nil {
+				reportFailure(fmt.Errorf("failed to create scratch file: %w", err))
+				return
+			}
+		}
 		cmd := vs.buildFFmpegCommand(ctx, path, output, meta, jobs)
 
 		stdout, err := cmd.StdoutPipe()
