@@ -315,6 +315,7 @@ go build -o fideo main.go && mv fideo ~/.local/bin/fideo
 - Output files are automatically prefixed with `out_` to avoid overwriting originals
 - If an output file already exists, you'll be prompted with options to overwrite, skip, or cancel
 - With `--overwrite`, a file whose re-encode comes out no smaller than the original is left untouched, and its row says so
+- With `--overwrite`, a replaced file keeps the original's permissions and modification time
 - The progress bar uses a color gradient that transitions from cyan (start) to yellow (complete)
 - Processing can be cancelled at any time - partial output files are automatically cleaned up
 - Select multiple files with `Space` and process them in batch with `Enter`

@@ -178,7 +178,9 @@ encode.go (`ffmpegArgs` / `profileFor`).
   naming within a batch. With `--overwrite`, the source file is replaced in place
   instead: ffmpeg encodes to a hidden `.…fideo-tmp` scratch file next to the
   destination, which is atomically renamed over the original on success (and the
-  original removed if `--format` changed its extension). When the destination is
+  original removed if `--format` changed its extension). Before the rename the
+  scratch file takes the source's permission bits and access/modification times
+  (`copyFileAttrs`), so a private `0600` clip isn't republished world-readable. When the destination is
   the source itself and the re-encode is no smaller than it, the scratch file is
   discarded and the original kept, with a note on its row (`finishInPlace`); a
   `--format` conversion is applied whatever its size. A bare `--overwrite` keeps

@@ -129,6 +129,10 @@ func finishInPlace(tmp, dest, src string) (note string, err error) {
 				formatFileSize(ti.Size()), formatFileSize(si.Size())), nil
 		}
 	}
+	if err := copyFileAttrs(src, tmp); err != nil {
+		_ = os.Remove(tmp)
+		return "", fmt.Errorf("failed to replace original: %w", err)
+	}
 	if err := os.Rename(tmp, dest); err != nil {
 		_ = os.Remove(tmp)
 		return "", fmt.Errorf("failed to replace original: %w", err)
@@ -141,6 +145,24 @@ func finishInPlace(tmp, dest, src string) (note string, err error) {
 		_ = os.Remove(src)
 	}
 	return "", nil
+}
+
+// copyFileAttrs gives dst the permission bits and access/modification times of
+// src. The rename in finishInPlace swaps in ffmpeg's freshly created file, so
+// without this a 0600 source would come back as 0644 (readable by others) and
+// lose its original mtime. The mode is required — failing to restrict it would
+// widen access — while the times are best-effort, as some filesystems refuse
+// them.
+func copyFileAttrs(src, dst string) error {
+	si, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	if err := os.Chmod(dst, si.Mode().Perm()); err != nil {
+		return err
+	}
+	_ = os.Chtimes(dst, accessTime(si), si.ModTime())
+	return nil
 }
 
 // pathExists reports whether a file or directory exists at p.
