@@ -187,6 +187,12 @@ func collectVideosFromPattern(pattern string) ([]videoFile, error) {
 	var allFiles []videoFile
 	seen := make(map[string]bool)
 	for _, match := range matches {
+		// Like a shell, "*" doesn't reach dotfiles (AppleDouble "._clip.mov"
+		// sidecars, .Trashes): only a pattern whose last element starts with "."
+		// does.
+		if isHidden(filepath.Base(match)) && !isHidden(filepath.Base(pattern)) {
+			continue
+		}
 		info, err := os.Stat(match)
 		if err != nil {
 			continue
@@ -205,11 +211,6 @@ func collectVideosFromPattern(pattern string) ([]videoFile, error) {
 
 		ext := strings.ToLower(filepath.Ext(match))
 		if !videoExtensions[ext] {
-			continue
-		}
-		// Like a shell, "*" doesn't reach dotfiles (AppleDouble "._clip.mov"
-		// sidecars): only a pattern whose last element starts with "." does.
-		if isHidden(filepath.Base(match)) && !isHidden(filepath.Base(pattern)) {
 			continue
 		}
 		absPath, err := filepath.Abs(match)

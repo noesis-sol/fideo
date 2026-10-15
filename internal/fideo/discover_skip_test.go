@@ -42,7 +42,8 @@ func TestFindVideosSkipsHiddenAndOwnOutputs(t *testing.T) {
 
 // TestCollectVideosFromPatternSkipsDotfiles pins that, like a shell, a pattern
 // whose last element doesn't start with "." doesn't match dotfiles, while one
-// that does (e.g. "._*") still reaches them.
+// that does (e.g. "._*") still reaches them; the same holds for hidden
+// directories, which "*" doesn't scan.
 func TestCollectVideosFromPatternSkipsDotfiles(t *testing.T) {
 	tests := []struct {
 		pattern string
@@ -51,11 +52,13 @@ func TestCollectVideosFromPatternSkipsDotfiles(t *testing.T) {
 		{"*.mov", []string{"a.mov"}},
 		{"*a.mov", []string{"a.mov"}},
 		{"._*", []string{"._a.mov"}},
+		{"*", []string{"a.mov"}},
+		{".*", []string{"._a.mov", "b.mp4"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.pattern, func(t *testing.T) {
 			dir := t.TempDir()
-			makeScanTree(t, dir, "a.mov", "._a.mov")
+			makeScanTree(t, dir, "a.mov", "._a.mov", ".Trashes/", ".Trashes/b.mp4")
 			files, err := collectVideosFromPattern(filepath.Join(dir, tt.pattern))
 			if err != nil {
 				t.Fatal(err)
