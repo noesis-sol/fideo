@@ -123,11 +123,11 @@ func TestDrainStderrKeepsTailPastLongLines(t *testing.T) {
 	if r.n != len(in) {
 		t.Errorf("drainStderr consumed %d of %d bytes; the pipe would block ffmpeg", r.n, len(in))
 	}
-	if len(got) > stderrTailBytes {
-		t.Errorf("retained %d bytes, cap is %d", len(got), stderrTailBytes)
+	if max := stderrHeadBytes + len(" … ") + stderrTailBytes; len(got) > max {
+		t.Errorf("retained %d bytes, cap is %d", len(got), max)
 	}
-	if lastLine(got) != "final error line" {
-		t.Errorf("last line = %q, want the final stderr line", lastLine(got))
+	if !strings.HasSuffix(got, " … final error line") {
+		t.Errorf("detail = %.40q…, want it to end with the final stderr line", got)
 	}
 }
 

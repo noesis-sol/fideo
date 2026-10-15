@@ -632,11 +632,17 @@ func streamProgress(stdout io.Reader, idx int, duration float64, send func(tea.M
 	}
 }
 
-// stderrTailBytes bounds how much of ffmpeg's stderr is retained for the error
-// report. The pipe itself is always drained to EOF (a full pipe would block
-// ffmpeg); only what is kept is capped, and it is the tail that is kept because
-// ffmpeg prints the decisive error last.
-const stderrTailBytes = 64 << 10
+// stderrHeadBytes and stderrTailBytes bound how much of ffmpeg's stderr is
+// retained for the error report. The pipe itself is always drained to EOF (a
+// full pipe would block ffmpeg); only what is kept is capped. Both ends are
+// kept: under -loglevel error ffmpeg prints the cause first ("Invalid channel
+// layout 5.1(side)…") and a generic consequence last ("Nothing was written into
+// output file…", "Error opening output files: …"), but a late fatal error
+// (disk full) can follow earlier non-fatal ones, so the last line still counts.
+const (
+	stderrHeadBytes = 4 << 10
+	stderrTailBytes = 64 << 10
+)
 
 // tailWriter retains the last keep bytes written through it.
 type tailWriter struct {
@@ -656,15 +662,58 @@ func (w *tailWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
+// stderrLog retains the first stderrHeadBytes and the last stderrTailBytes of
+// ffmpeg's stderr, so both its first and its last error line survive.
+type stderrLog struct {
+	head []byte
+	tail tailWriter
+}
+
+func (l *stderrLog) Write(p []byte) (int, error) {
+	if room := stderrHeadBytes - len(l.head); room > 0 {
+		l.head = append(l.head, p[:min(room, len(p))]...)
+	}
+	return l.tail.Write(p)
+}
+
 // drainStderr reads ffmpeg's stderr to EOF — keeping the pipe from filling and
-// blocking ffmpeg — and returns the retained tail so a failed encode can report
-// the underlying error. It deliberately avoids bufio.Scanner: one line longer
-// than the scanner's limit would make it stop reading, and the stalled pipe
-// would then hang the encode.
+// blocking ffmpeg — and returns the error detail for a failed encode (see
+// errorDetail). It deliberately avoids bufio.Scanner: one line longer than the
+// scanner's limit would make it stop reading, and the stalled pipe would then
+// hang the encode.
 func drainStderr(stderr io.Reader) string {
-	w := &tailWriter{keep: stderrTailBytes}
-	_, _ = io.Copy(w, stderr)
-	return string(w.buf)
+	l := &stderrLog{tail: tailWriter{keep: stderrTailBytes}}
+	_, _ = io.Copy(l, stderr)
+	return errorDetail(string(l.head), string(l.tail.buf))
+}
+
+// logAddrRegex matches the context address ffmpeg prints in a log prefix
+// ("[libopus @ 0xbd6ca0700]"): noise to a reader, and it eats row width.
+var logAddrRegex = regexp.MustCompile(` @ 0x[0-9a-fA-F]+`)
+
+// errorDetail picks the lines of ffmpeg's stderr that explain a failure: the
+// first error line of head, which names the cause, followed by the last of tail
+// when it differs. The cause leads, so it is what a width-truncated error row
+// keeps. "" if stderr was empty.
+func errorDetail(head, tail string) string {
+	first := logAddrRegex.ReplaceAllString(firstLine(head), "")
+	last := logAddrRegex.ReplaceAllString(lastLine(tail), "")
+	switch {
+	case first == "":
+		return last
+	case last == "":
+		return first
+	case strings.HasPrefix(last, first):
+		// One line, or a first line longer than the head that tail kept whole.
+		return last
+	}
+	return first + " … " + last
+}
+
+// firstLine returns the first non-blank line of s, trimmed ("" if none).
+func firstLine(s string) string {
+	line, _, _ := strings.Cut(strings.TrimSpace(s), "\n")
+	return strings.TrimSpace(line)
 }
 
 // processFile spawns a worker goroutine that probes the input, runs ffmpeg, and
@@ -754,11 +803,11 @@ func (m model) processFile(idx int, ctx context.Context, cancel context.CancelFu
 			streamProgress(stdout, idx, meta.duration, program.Send)
 		}()
 
-		var stderrTail string
+		var stderrDetail string
 		stderrDone := make(chan struct{})
 		go func() {
 			defer close(stderrDone)
-			stderrTail = drainStderr(stderr)
+			stderrDetail = drainStderr(stderr)
 		}()
 
 		// Both pipes must reach EOF before Wait: Wait closes the parent's read
@@ -782,8 +831,8 @@ func (m model) processFile(idx int, ctx context.Context, cancel context.CancelFu
 			}
 
 			errMsg := fmt.Sprintf("ffmpeg failed: %v", waitErr)
-			if detail := lastLine(stderrTail); detail != "" {
-				errMsg = fmt.Sprintf("%s: %s", errMsg, detail)
+			if stderrDetail != "" {
+				errMsg = fmt.Sprintf("%s: %s", errMsg, stderrDetail)
 			}
 			// A mid-encode failure (encoder error, disk full, …) leaves ffmpeg's
 			// partially-written output behind; discard it so a corrupt file isn't

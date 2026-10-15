@@ -162,10 +162,13 @@ drives the TUI through a pseudo-terminal.
   error or cancel; under `--overwrite` it renames a scratch file over the
   source, or keeps the source when the re-encode is no smaller. Code:
   `processFile`, `finishInPlace`, `streamProgress`, `drainStderr`, `tailWriter`,
-  `waitWorkers`.
+  `errorDetail`, `waitWorkers`. A failed encode reports stderr's first error
+  line (the cause) and, when it differs, its last one.
 - **Tests** (unit): `stream_test.go` `TestStreamProgressCoalescesAndDrains`,
   `TestStreamProgressNoDurationDrains`, `TestDrainStderrKeepsTailPastLongLines`,
-  `TestTailWriterRetainsLastBytes`, `TestWaitWorkers`;
+  `TestTailWriterRetainsLastBytes`, `TestWaitWorkers`; `errordetail_test.go`
+  `TestDrainStderrReportsCause`, `TestDrainStderrOverlongSingleLine`,
+  `TestFirstLine`;
   `inplace_keep_test.go` `TestFinishInPlace` (replace, keep a larger or equal
   re-encode, format conversion), `TestFinishInPlaceNoteSizes`,
   `TestFinishInPlaceRenameFailure`, `TestHandleDoneRecordsNote`.
@@ -174,7 +177,7 @@ drives the TUI through a pseudo-terminal.
   messages of a successful encode (info, start, progress, output info, done);
   `--overwrite` replacing the source, removing it after a format change and
   keeping it when the name is unchanged; a probe failure; an ffmpeg failure
-  reporting stderr's last line and removing the partial output; a cancel
+  reporting its stderr detail and removing the partial output; a cancel
   removing the partial output (the scratch file, never the source under
   `--overwrite`); an invalid index.
 
