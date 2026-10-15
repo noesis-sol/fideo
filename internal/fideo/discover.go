@@ -36,6 +36,7 @@ type videoFile struct {
 	info     string
 	outInfo  string
 	outPath  string // resolved, collision-free output path (assigned when queued)
+	note     string // why a done file has no fresh output (e.g. original kept)
 	err      error  // Error for this specific file
 }
 

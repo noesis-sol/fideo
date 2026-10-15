@@ -157,11 +157,15 @@ drives the TUI through a pseudo-terminal.
 - **Reached by**: starting a batch; each file runs `processFile` in
   `encode.go`, which probes, runs ffmpeg, streams progress and reports done,
   error or cancel; under `--overwrite` it renames a scratch file over the
-  source. Code: `processFile`, `streamProgress`, `drainStderr`, `tailWriter`,
+  source, or keeps the source when the re-encode is no smaller. Code:
+  `processFile`, `finishInPlace`, `streamProgress`, `drainStderr`, `tailWriter`,
   `waitWorkers`.
 - **Tests** (unit): `stream_test.go` `TestStreamProgressCoalescesAndDrains`,
   `TestStreamProgressNoDurationDrains`, `TestDrainStderrKeepsTailPastLongLines`,
-  `TestTailWriterRetainsLastBytes`, `TestWaitWorkers`.
+  `TestTailWriterRetainsLastBytes`, `TestWaitWorkers`;
+  `inplace_keep_test.go` `TestFinishInPlace` (replace, keep a larger or equal
+  re-encode, format conversion), `TestFinishInPlaceNoteSizes`,
+  `TestFinishInPlaceRenameFailure`, `TestHandleDoneRecordsNote`.
 - **Untested**: `processFile` itself. It sends through the package global
   `program`, so a test needs a seam for the send function. Not covered: the
   messages of a successful encode (info, start, progress, output info, done);

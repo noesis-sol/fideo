@@ -298,6 +298,7 @@ func (m model) handleOutputInfo(msg outputInfoMsg) (model, tea.Cmd) {
 func (m model) handleDone(msg doneMsg) (model, tea.Cmd) {
 	m.files[msg.idx].status = statusDone
 	m.files[msg.idx].progress = 1.0
+	m.files[msg.idx].note = msg.note
 	m.completedCount++
 	delete(m.cancels, msg.idx)
 	if m.processingCount > 0 {

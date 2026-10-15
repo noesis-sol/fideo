@@ -176,7 +176,10 @@ encode.go (`ffmpegArgs` / `profileFor`).
   naming within a batch. With `--overwrite`, the source file is replaced in place
   instead: ffmpeg encodes to a hidden `.…fideo-tmp` scratch file next to the
   destination, which is atomically renamed over the original on success (and the
-  original removed if `--format` changed its extension). A bare `--overwrite` keeps
+  original removed if `--format` changed its extension). When the destination is
+  the source itself and the re-encode is no smaller than it, the scratch file is
+  discarded and the original kept, with a note on its row (`finishInPlace`); a
+  `--format` conversion is applied whatever its size. A bare `--overwrite` keeps
   each file's own container; pair it with `--format` to also convert (a source
   whose extension already names the format in another case, e.g. `CLIP.MP4` under
   `--format mp4`, keeps its spelling, so it is replaced rather than duplicated on a

@@ -37,6 +37,7 @@ var (
 	dimStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("250"))
 	successStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("82"))
 	errorStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("196"))
+	warnStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("214"))
 	infoStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("39"))
 	keyStyle      = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("117")) // Soft cyan, bold
 	helpTextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("245"))            // Light gray for descriptions
@@ -228,6 +229,9 @@ func rowLines(f videoFile) int {
 		if f.outInfo != "" {
 			n++
 		}
+		if f.note != "" {
+			n++
+		}
 	case statusError:
 		if f.err != nil {
 			n++
@@ -364,6 +368,9 @@ func (m model) renderFileRow(s *strings.Builder, i int, f videoFile) {
 		}
 		if f.outInfo != "" {
 			m.writeDetail(s, successStyle, "Out: "+f.outInfo)
+		}
+		if f.note != "" {
+			m.writeDetail(s, warnStyle, "Note: "+f.note)
 		}
 	case statusError:
 		s.WriteString(errorStyle.Render(errorMark))

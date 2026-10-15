@@ -112,6 +112,37 @@ func tempOutputPath(dest, source string) string {
 	return filepath.Join(dir, "."+stem+"."+srcTag+tempOutputMarker+ext)
 }
 
+// finishInPlace completes an in-place encode once ffmpeg has written tmp: it
+// renames tmp over dest and, when a format change moved the file to a new name
+// (clip.mov -> clip.mp4), removes the original src so it is replaced rather than
+// duplicated. A recompression in the same container (dest is src) that came out
+// no smaller than the source is not worth the generation loss, so tmp is
+// discarded, src is kept untouched, and the returned note says why. A format
+// conversion is applied whatever its size: the user asked for the new container.
+func finishInPlace(tmp, dest, src string) (note string, err error) {
+	if sameFile(dest, src) {
+		ti, terr := os.Stat(tmp)
+		si, serr := os.Stat(src)
+		if terr == nil && serr == nil && ti.Size() >= si.Size() {
+			_ = os.Remove(tmp)
+			return fmt.Sprintf("kept original: re-encode (%s) was not smaller than source (%s)",
+				formatFileSize(ti.Size()), formatFileSize(si.Size())), nil
+		}
+	}
+	if err := os.Rename(tmp, dest); err != nil {
+		_ = os.Remove(tmp)
+		return "", fmt.Errorf("failed to replace original: %w", err)
+	}
+	// sameFile, not a string compare: dest and src can be one physical file
+	// under different spellings (a case-insensitive filesystem), and removing
+	// src there would delete the file just written. Only drop the source when it
+	// is a genuinely distinct file.
+	if !sameFile(dest, src) {
+		_ = os.Remove(src)
+	}
+	return "", nil
+}
+
 // pathExists reports whether a file or directory exists at p.
 func pathExists(p string) bool {
 	_, err := os.Stat(p)
@@ -742,21 +773,19 @@ func (m model) processFile(idx int, ctx context.Context, cancel context.CancelFu
 			return
 		}
 
-		// In-place: atomically swap the freshly encoded temp over the destination,
-		// then drop the original source if a format change moved it to a new name
-		// (e.g. clip.mov -> clip.mp4) so the file is truly replaced, not duplicated.
+		// In-place: atomically swap the freshly encoded temp over the destination
+		// (dropping a source a format change left under its old name) — or keep
+		// the source when recompressing it didn't make it smaller.
 		if inPlace {
-			if err := os.Rename(output, finalDest); err != nil {
-				_ = os.Remove(output)
-				program.Send(errorMsg{idx: idx, err: fmt.Errorf("failed to replace original: %w", err)})
+			note, err := finishInPlace(output, finalDest, path)
+			if err != nil {
+				program.Send(errorMsg{idx: idx, err: err})
 				return
 			}
-			// sameFile, not a string compare: finalDest and path can be one physical
-			// file under different spellings (a case-insensitive filesystem), and
-			// removing "path" there would delete the file we just wrote. Only drop
-			// the source when it is a genuinely distinct file.
-			if !sameFile(finalDest, path) {
-				_ = os.Remove(path)
+			if note != "" {
+				// No Out: line — the output is the untouched source, already shown as In:.
+				program.Send(doneMsg{idx: idx, note: note})
+				return
 			}
 		}
 

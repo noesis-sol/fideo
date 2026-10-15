@@ -51,7 +51,14 @@ type progressMsg struct {
 type processingStartMsg struct {
 	idx int
 }
-type doneMsg struct{ idx int }
+
+// doneMsg reports a finished file. note, when set, explains an outcome other
+// than a fresh output (an --overwrite source kept because re-encoding it did
+// not make it smaller).
+type doneMsg struct {
+	idx  int
+	note string
+}
 type errorMsg struct {
 	idx int
 	err error
