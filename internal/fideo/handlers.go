@@ -75,14 +75,8 @@ func (m model) fillSlots(skipIdx int, cmds []tea.Cmd) (model, []tea.Cmd) {
 		if m.files[i].outPath == "" {
 			m.files[i].outPath = m.resolveOutputPath(i)
 		}
-		// Prompt before clobbering an existing, distinct file. Plain in-place
-		// (destination == source) is the consented case and needs no prompt, but an
-		// in-place --format conversion whose destination is a *different*,
-		// pre-existing file must prompt — as must every non-in-place out_ file.
-		// Gate on "destination exists and is not the source"; EqualFold so a
-		// case-only spelling difference on a case-insensitive filesystem still
-		// counts as the source (not a clobber).
-		if pathExists(m.files[i].outPath) && !strings.EqualFold(m.files[i].outPath, m.files[i].path) {
+		// Prompt before clobbering an existing, distinct file.
+		if clobbersOtherFile(m.files[i]) {
 			if !m.showOverwritePrompt {
 				m.showOverwritePrompt = true
 				m.overwriteCursor = 0
@@ -98,6 +92,18 @@ func (m model) fillSlots(skipIdx int, cmds []tea.Cmd) (model, []tea.Cmd) {
 		cmds = append(cmds, m.startFile(i))
 	}
 	return m, cmds
+}
+
+// clobbersOtherFile reports whether encoding f would overwrite an existing file
+// other than f's own source. Plain in-place (destination == source) is the
+// consented case and needs no prompt, but an in-place --format conversion whose
+// destination is a *different*, pre-existing file must prompt — as must every
+// non-in-place out_ file. Sameness is asked of the filesystem (sameFile) rather
+// than decided by comparing spellings: a case-only difference is the source on a
+// case-insensitive filesystem but a distinct file to protect on a case-sensitive
+// one.
+func clobbersOtherFile(f videoFile) bool {
+	return pathExists(f.outPath) && !sameFile(f.outPath, f.path)
 }
 
 func (m model) tryStartNextFile() (model, tea.Cmd) {

@@ -177,7 +177,11 @@ encode.go (`ffmpegArgs` / `profileFor`).
   instead: ffmpeg encodes to a hidden `.…fideo-tmp` scratch file next to the
   destination, which is atomically renamed over the original on success (and the
   original removed if `--format` changed its extension). A bare `--overwrite` keeps
-  each file's own container; pair it with `--format` to also convert. The collision
+  each file's own container; pair it with `--format` to also convert (a source
+  whose extension already names the format in another case, e.g. `CLIP.MP4` under
+  `--format mp4`, keeps its spelling, so it is replaced rather than duplicated on a
+  case-sensitive filesystem). Whether a destination *is* the source is asked of the
+  filesystem (`sameFile` / `os.SameFile`), never decided by comparing spellings. The collision
   prompt is skipped when the destination *is* the source (the consented case), but
   an in-place `--format` conversion onto a *different*, pre-existing file still
   prompts before clobbering it. Two selected sources that would map to the same

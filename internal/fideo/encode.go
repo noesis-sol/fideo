@@ -83,11 +83,15 @@ const tempOutputMarker = ".fideo-tmp"
 // explicit --format was given. A plain --overwrite leaves outputFormat empty so
 // the file is recompressed in its own container rather than silently converted to
 // a different one (which would also delete the original under a new name).
+// When the source's extension already names outputFormat in another case
+// (CLIP.MP4 under --format mp4) its own spelling is kept: on a case-sensitive
+// filesystem CLIP.mp4 is a different file, so swapping the case would leave the
+// source unreplaced or clobber an unrelated file.
 func inPlaceDest(inputPath, outputFormat string) string {
-	if outputFormat == "" {
+	ext := filepath.Ext(inputPath)
+	if outputFormat == "" || strings.EqualFold(ext, "."+outputFormat) {
 		return inputPath
 	}
-	ext := filepath.Ext(inputPath)
 	return strings.TrimSuffix(inputPath, ext) + "." + outputFormat
 }
 
@@ -112,6 +116,23 @@ func tempOutputPath(dest, source string) string {
 func pathExists(p string) bool {
 	_, err := os.Stat(p)
 	return err == nil
+}
+
+// sameFile reports whether a and b name the same existing file. It asks the
+// filesystem (os.SameFile) rather than comparing spellings: paths that differ
+// only in case are one file on macOS/Windows but two on a case-sensitive
+// filesystem (the Linux default), so no string comparison is right on both.
+// A path that does not exist is never the same file as anything.
+func sameFile(a, b string) bool {
+	ai, err := os.Stat(a)
+	if err != nil {
+		return false
+	}
+	bi, err := os.Stat(b)
+	if err != nil {
+		return false
+	}
+	return os.SameFile(ai, bi)
 }
 
 // resolveOutputPath returns the output path for file idx, disambiguated so that
@@ -730,11 +751,11 @@ func (m model) processFile(idx int, ctx context.Context, cancel context.CancelFu
 				program.Send(errorMsg{idx: idx, err: fmt.Errorf("failed to replace original: %w", err)})
 				return
 			}
-			// EqualFold, not !=: on a case-insensitive filesystem finalDest and path
-			// can be the same physical file under different spellings (clip.MP4 ->
-			// clip.mp4), and removing "path" there would delete the file we just
-			// wrote. Only drop the source when it is a genuinely distinct file.
-			if !strings.EqualFold(finalDest, path) {
+			// sameFile, not a string compare: finalDest and path can be one physical
+			// file under different spellings (a case-insensitive filesystem), and
+			// removing "path" there would delete the file we just wrote. Only drop
+			// the source when it is a genuinely distinct file.
+			if !sameFile(finalDest, path) {
 				_ = os.Remove(path)
 			}
 		}
