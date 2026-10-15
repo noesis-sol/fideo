@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "fideo",
+  "project_id": "a04bda7a-2708-400d-894b-0209b6b50634"
+}
