@@ -261,8 +261,8 @@ drives the TUI through a pseudo-terminal.
   `TestOverwriteFillsRemainingSlots`, `TestSkipDeselectsAndStartsNext`,
   `TestSkipLastFileSettlesBatch`, `TestSkipWaitsForInFlightSibling`,
   `TestCancelAllDropsQueue`, `TestCtrlCOnPromptCancelsAndQuits`,
-  `TestPromptSwallowsOtherKeys`.
-- **Untested**: `renderOverwriteDialog`.
+  `TestPromptSwallowsOtherKeys`; `view_text_test.go` `TestOverwriteDialogText`
+  (`renderOverwriteDialog`).
 
 - **Tickets**: fideo-atq.16.
 
@@ -270,12 +270,14 @@ drives the TUI through a pseudo-terminal.
 
 - **Reached by**: every frame of the TUI. Code: `view.go`.
 - **Tests** (unit): `view_test.go` `TestViewport`, `TestViewFitsTerminalHeight`,
-  `TestRowLinesMatchesRender`, `TestFitTruncates`, `TestUpdateTracksScrollOffset`.
-- **Untested**: the "Processing X of Y files (N completed)" header; the four
-  footers (idle help, processing, all done, done with errors); the empty-list
-  message; the overwrite dialog's text and its highlighted option;
-  `fileGlyph` per state; the percentage readout's rounding and clamping;
-  `getProgressColor` at and beyond its ends, and the 101-entry percent tables.
+  `TestRowLinesMatchesRender`, `TestFitTruncates`, `TestUpdateTracksScrollOffset`;
+  `view_text_test.go` (text compared through `ansi.Strip`):
+  `TestStatusHeaderOnlyWhileProcessing`, `TestFooterText` (idle help,
+  processing, all done, done with errors), `TestViewEmptyList`,
+  `TestOverwriteDialogText` (base name, highlighted option), `TestFileGlyph`,
+  `TestFileRowShowsSpinnerWhileEncoding`, `TestPercentReadout` (rounding,
+  clamping), `TestGetProgressColor` (ends and clamping), `TestPercentLabels`
+  (the 101-entry percent tables).
 
 - **Tickets**: fideo-atq.17.
 
