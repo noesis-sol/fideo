@@ -54,8 +54,12 @@ drives the TUI through a pseudo-terminal.
   with their hints, a missing path, a non-video file, an empty directory and
   a pattern with no match exit 1 with their messages; and with no ffmpeg on
   PATH, `--help` and an unknown option still work.
+  `option_errors_without_ffmpeg_test.go` `TestOptionErrorsWithoutFFmpeg`: with
+  no ffmpeg on PATH, `--format foo`, `--size bogus` and `--hw --format webm`
+  still exit 1 with their usage errors, not the install dialog.
 
-- **Tickets**: fideo-atq.3 (Run's checks, unit), fideo-atq.4 (the binary).
+- **Tickets**: fideo-atq.3 (Run's checks, unit), fideo-atq.4 (the binary),
+  fideo-a1u (option errors before the dependency check).
 
 ## Finding the videos
 

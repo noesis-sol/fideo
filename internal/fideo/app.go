@@ -312,16 +312,17 @@ func Run() {
 		os.Exit(0)
 	}
 
-	// Dependencies are checked only once the command line is valid, so --help
-	// and usage errors work on a machine that has no ffmpeg yet.
-	if err := checkDependencies(); err != nil {
-		displayInstallationHelp()
-		os.Exit(1)
-	}
-
 	cfg, err := buildConfig(opts, defaultConfig)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Dependencies are checked only once the command line is valid, so --help
+	// and usage errors, bad --format/--size/--hw values included, work on a
+	// machine that has no ffmpeg yet.
+	if err := checkDependencies(); err != nil {
+		displayInstallationHelp()
 		os.Exit(1)
 	}
 
