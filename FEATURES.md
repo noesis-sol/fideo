@@ -46,10 +46,14 @@ drives the TUI through a pseudo-terminal.
   concurrency at 2, the software fallback warning, the WebM-source warning
   count under `--hw --overwrite`; and the single-dash aliases `-format`,
   `-size`, `-hw`).
-- **Untested**:
-  - The binary itself: `--help` printing usage and exiting 0, usage errors
-    exiting 1 with "Run 'fideo --help' for usage.", a missing path, a
-    non-video file, a directory or pattern with no videos.
+- **Tests** (integration, the built binary): `cli_e2e_test.go`
+  `TestCLIEndToEnd` builds `./cmd/fideo` and runs it with stub
+  ffmpeg/ffprobe on PATH: `--help`/`-h` print usage and exit 0, an unknown
+  option or a flag missing its value exits 1 with "Run 'fideo --help' for
+  usage.", `--format bogus`, `--size bogus` and `--hw --format webm` exit 1
+  with their hints, a missing path, a non-video file, an empty directory and
+  a pattern with no match exit 1 with their messages; and with no ffmpeg on
+  PATH, `--help` and an unknown option still work.
 
 - **Tickets**: fideo-atq.3 (Run's checks, unit), fideo-atq.4 (the binary).
 
