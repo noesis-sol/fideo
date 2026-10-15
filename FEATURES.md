@@ -123,16 +123,17 @@ drives the TUI through a pseudo-terminal.
   `fixes_test.go` `TestEvenHeightScaleFilter`; `portrait_scale_test.go`
   `TestScaleFilterCapsShortSide` (sm/md/lg filters); `stream_test.go`
   `TestThreadBudgetScalesWithBatch`, `TestConcurrentJobs`;
-  `opus_layout_test.go` `TestOpusAudioRemapsChannelLayout` (webm's aformat).
+  `opus_layout_test.go` `TestOpusAudioRemapsChannelLayout` (webm's aformat);
+  `ffmpeg_args_presets_test.go` `TestFFmpegArgsSizePresets` (540/1080/2160
+  reach `-vf`), `TestFFmpegArgsGPUEncoders` (full NVENC/QSV/AMF argument
+  lists), `TestProfileForUnknownContainer` (avi), `TestAutoThreadsPerJobBelowOneJob`.
   (integration): `integration_test.go` `TestEncodeIntegration` (a real 320x240
   encode to mp4, output probed as 240p H.264);
   `portrait_scale_integration_test.go` `TestScaleShortSideIntegration`
   (portrait, landscape, square and odd-sized encodes, output size probed);
   `opus_layout_integration_test.go` `TestWebMSideLayoutIntegration` (a
   5.1(side) AC3 source encoded to webm keeps six Opus channels).
-- **Untested**: full argument lists for NVENC, QSV and AMF (only their codec
-  arguments are checked); `profileFor` for an unknown container; `autoThreadsPerJob` below
-  one job; `autoMaxConcurrent`'s clamp to [2, 4] (it reads
+- **Untested**: `autoMaxConcurrent`'s clamp to [2, 4] (it reads
   `runtime.NumCPU()` directly); real encodes to mov, mkv and webm, and with
   `--size`.
 
