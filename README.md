@@ -139,7 +139,7 @@ fideo 'courses/*'
 
 ### Output Size
 
-Control the output resolution height with `--size`:
+Control the output resolution with `--size`. It caps the shorter side, so a portrait\nphone clip keeps its width at the cap instead of shrinking to fit it by height:
 
 | Size | Aliases | Resolution |
 |------|---------|------------|
@@ -149,13 +149,13 @@ Control the output resolution height with `--size`:
 
 ```bash
 fideo --size sm video.mp4
-# Compresses to 540p height
+# Compresses to 540p (short side at most 540 pixels)
 
 fideo --size large --format mkv video.mp4
-# Compresses to 2160p height as MKV
+# Compresses to 2160p as MKV
 ```
 
-The width is automatically calculated to preserve the original aspect ratio.
+The other side is calculated to preserve the original aspect ratio, and a video\nalready smaller than the cap is never upscaled.
 
 ### Output Format
 
@@ -195,7 +195,7 @@ Fideo uses optimized ffmpeg settings for the best balance between quality and fi
 | **Codec** | H.264 (libx264) | Universal compatibility |
 | **Preset** | medium | Balanced compression speed and efficiency |
 | **CRF** | 28 | Quality level (lower = better quality) |
-| **Resolution** | 1080p | Scaled height (`--size` flag: 540p / 1080p / 2160p) |
+| **Resolution** | 1080p | Shorter side capped (`--size` flag: 540p / 1080p / 2160p) |
 | **Audio Codec** | AAC | High compatibility |
 | **Audio Bitrate** | 96k | Optimized for voice/music |
 | **Output** | `out_{filename}` | Prefixed in same directory |

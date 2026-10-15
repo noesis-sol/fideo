@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -196,11 +195,8 @@ func TestEvenHeightScaleFilter(t *testing.T) {
 		t.Fatalf("no -vf filter in %v", args)
 	}
 	got := args[i+1]
-	want := "scale=-2:'2*trunc(min(1080,ih)/2)'"
+	want := "scale=w='if(gte(iw,ih),-2,2*trunc(min(1080,iw)/2))':h='if(gte(iw,ih),2*trunc(min(1080,ih)/2),-2)'"
 	if got != want {
-		t.Errorf("scale filter = %q, want %q (must force an even height)", got, want)
-	}
-	if strings.Contains(got, "min(1080,ih)'") && !strings.Contains(got, "trunc") {
-		t.Error("scale filter passes odd height through; libx264 would abort")
+		t.Errorf("scale filter = %q, want %q (must force even dimensions)", got, want)
 	}
 }

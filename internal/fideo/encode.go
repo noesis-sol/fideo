@@ -251,14 +251,7 @@ func (vs *videoService) ffmpegArgs(inputPath, outputPath string, meta videoMetad
 	args := decodeArgs(meta, runtime.GOOS)
 	args = append(args, "-i", safeArgPath(inputPath))
 	args = append(args, p.video(vs.config, threads)...)
-	// Force BOTH dimensions even: the -2 token only rounds width, while the height
-	// expression min(res,ih) passes an odd source height straight through when no
-	// downscale happens (ih <= res). libx264/yuv420p require even dimensions, so an
-	// odd height (e.g. a 640x405 source at the 1080 cap) would abort the encode with
-	// "height not divisible by 2". 2*trunc(.../2) rounds the target height down to
-	// the nearest even value (off by at most one pixel) and is harmless for the
-	// already-even and downscaled cases.
-	args = append(args, "-vf", "scale=-2:'2*trunc(min("+vs.config.resolution+",ih)/2)'")
+	args = append(args, "-vf", scaleFilter(vs.config.resolution))
 	// Force 8-bit 4:2:0 output. Left to the source's pixel format, a 10-bit HDR
 	// phone clip or a 4:2:2 ProRes/screen recording makes libx264 emit High 10 /
 	// High 4:2:2 profiles that QuickTime, browsers, and hardware decoders often
@@ -269,6 +262,24 @@ func (vs *videoService) ffmpegArgs(inputPath, outputPath string, meta videoMetad
 	args = append(args, p.muxFlags...)
 	args = append(args, "-progress", "pipe:1", "-loglevel", "error", "-y", safeArgPath(outputPath))
 	return args
+}
+
+// scaleFilter caps the video's SHORT side at res (the --size preset), so a
+// portrait phone clip (1080x1920) keeps its full width at the 1080 default
+// instead of being squeezed to 608x1080 as a height cap would. A square or
+// landscape source caps its height; a portrait one caps its width. Neither is
+// ever upscaled (min(res,...)).
+//
+// Both dimensions come out even: the -2 token rounds the derived side, and
+// 2*trunc(.../2) rounds the capped side down to the nearest even value (off by at
+// most one pixel). Without that, an odd source dimension passes straight through
+// when no downscale happens (e.g. a 640x405 source at the 1080 cap) and
+// libx264/yuv420p aborts with "height not divisible by 2". The values are quoted
+// so the commas inside if()/min() aren't read as filtergraph separators.
+func scaleFilter(res string) string {
+	w := "if(gte(iw,ih),-2,2*trunc(min(" + res + ",iw)/2))"
+	h := "if(gte(iw,ih),2*trunc(min(" + res + ",ih)/2),-2)"
+	return "scale=w='" + w + "':h='" + h + "'"
 }
 
 func (vs *videoService) buildFFmpegCommand(ctx context.Context, inputPath, outputPath string, meta videoMetadata, jobs int) *exec.Cmd {

@@ -110,13 +110,15 @@ drives the TUI through a pseudo-terminal.
   `TestBuildFFmpegCommandString`, `TestFFmpegArgsHardwareDecodePrecedesInput`,
   `TestDecodeArgs`, `TestProfileAllowsHW`, `TestHWEncoderArgs`,
   `TestContainerOf`; `platform_test.go` `TestDecodeArgsPerOS`;
-  `fixes_test.go` `TestEvenHeightScaleFilter`; `stream_test.go`
+  `fixes_test.go` `TestEvenHeightScaleFilter`; `portrait_scale_test.go`
+  `TestScaleFilterCapsShortSide` (sm/md/lg filters); `stream_test.go`
   `TestThreadBudgetScalesWithBatch`, `TestConcurrentJobs`.
   (integration): `integration_test.go` `TestEncodeIntegration` (a real 320x240
-  encode to mp4, output probed as 240p H.264).
-- **Untested**: the 540 and 2160 size presets reaching the scale filter; full
-  argument lists for NVENC, QSV and AMF (only their codec arguments are
-  checked); `profileFor` for an unknown container; `autoThreadsPerJob` below
+  encode to mp4, output probed as 240p H.264);
+  `portrait_scale_integration_test.go` `TestScaleShortSideIntegration`
+  (portrait, landscape, square and odd-sized encodes, output size probed).
+- **Untested**: full argument lists for NVENC, QSV and AMF (only their codec
+  arguments are checked); `profileFor` for an unknown container; `autoThreadsPerJob` below
   one job; `autoMaxConcurrent`'s clamp to [2, 4] (it reads
   `runtime.NumCPU()` directly); real encodes to mov, mkv and webm, and with
   `--size`.

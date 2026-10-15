@@ -158,12 +158,13 @@ encode.go (`ffmpegArgs` / `profileFor`).
   - `--hw` substitutes a hardware H.264 encoder (VideoToolbox / NVENC / QSV / AMF)
     when one initializes successfully, falling back to software otherwise
   - `webm` output uses libvpx-vp9 (`-crf 28 -b:v 0`) since the container can't carry H.264
-- Resolution: scaled to 1080p height and never upscaled
-  (`scale=-2:'2*trunc(min(1080,ih)/2)'`); `--size sm|md|lg` selects 540 / 1080 /
-  2160. Both dimensions are forced even — `-2` rounds the width, and the
-  `2*trunc(.../2)` wrapper rounds the height — so an odd-height 4:2:0 source (where
-  no downscale happens, ih ≤ target) can't reach libx264/yuv420p and abort with
-  "height not divisible by 2".
+- Resolution: the *short* side is capped at 1080 and never upscaled
+  (`scaleFilter`): a landscape or square source caps its height, a portrait one
+  its width, so a 1080x1920 phone clip stays 1080x1920 rather than shrinking to
+  608x1080. `--size sm|md|lg` selects 540 / 1080 / 2160. Both dimensions are
+  forced even — `-2` rounds the derived side, and the `2*trunc(.../2)` wrapper
+  rounds the capped side — so an odd-sized 4:2:0 source (where no downscale
+  happens) can't reach libx264/yuv420p and abort with "height not divisible by 2".
 - Pixel format: forced to `yuv420p` (8-bit 4:2:0) for every container, so 10-bit
   HDR phone clips, 4:2:2 ProRes, and 4:4:4 screen recordings don't yield High 10 /
   High 4:2:2 profiles that many players and hardware decoders refuse. No
