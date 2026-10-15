@@ -159,8 +159,8 @@ drives the TUI through a pseudo-terminal.
 - **Untested**: `formatVideoInfo` (bitrate as Mbps, an `N/A` bitrate, the
   container upper-cased, "unknown size" for a missing file);
   `formatFileSize` (bytes, KB, MB, GB boundaries); `getVideoInfo`'s "unable to
-  read video info"; `probeMetadata` on an empty path and on a file that isn't
-  a video.
+  read video info"; `probeMetadata` on an empty path (a file that isn't a
+  video: `TestProcessFileProbeFailureIntegration`).
 
 - **Tickets**: fideo-atq.11 (formatting, unit); probe failures on real
   files are in fideo-atq.13.
@@ -189,9 +189,17 @@ drives the TUI through a pseudo-terminal.
   encode in order (info, start, progress, output info, done) and the files
   left: the `out_` copy, `--overwrite` replacing the source with no scratch
   file, and `--overwrite --format mp4` turning `clip.mov` into `clip.mp4`.
-- **Untested**: a probe failure; an ffmpeg failure reporting its stderr
-  detail and removing the partial output; a cancel removing the partial
-  output (the scratch file, never the source under `--overwrite`).
+  `worker_failure_integration_test.go`
+  `TestProcessFileProbeFailureIntegration` (a text file named `.mp4` gets a
+  lone "failed to probe video" error ending in ffprobe's last stderr line),
+  `TestProcessFileFFmpegFailureIntegration` (a preset x264 rejects gets
+  "ffmpeg failed: …" with the cause, and the empty output ffmpeg created, the
+  `out_` copy or the `--overwrite` scratch file, is removed),
+  `TestProcessFileCancelIntegration` (cancelling after the first progress
+  report, with the partial output on disk, ends in a cancelMsg and removes it,
+  the `out_` copy or the scratch file, leaving the source intact).
+- **Untested**: a failure while renaming the scratch file over the source in
+  a real encode (covered only by the unit `TestFinishInPlaceRenameFailure`).
 
 - **Tickets**: fideo-atq.12 (success and in-place), fideo-atq.13 (failure
   and cancel).
