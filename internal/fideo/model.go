@@ -41,7 +41,11 @@ type model struct {
 	cancels      map[int]context.CancelFunc
 	config       compressionConfig
 	videoService *videoService
-	err          error
+	// launch starts the worker for a file whose cancel startFile has just
+	// registered. nil means processFile; a test sets a fake so the batch handlers
+	// can be driven without probing or encoding anything.
+	launch func(m model, idx int, ctx context.Context, cancel context.CancelFunc, jobs int) tea.Cmd
+	err    error
 }
 
 type progressMsg struct {

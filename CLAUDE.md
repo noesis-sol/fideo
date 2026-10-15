@@ -135,6 +135,8 @@ Tests live beside the code in `internal/fideo` (white-box, `package fideo`).
   The `processFile` worker sends through `videoService.send` (defaulting to the
   package `program`'s Send), so a test swaps in a collector and runs the worker
   without a Bubble Tea program.
+  `startFile` launches workers through `model.launch` (nil means `processFile`),
+  so the batch handlers are driven with a fake launcher that starts nothing.
 
 - **Integration tests** — `go test -tags=integration ./...`. Behind the
   `integration` build tag: they generate a tiny clip, run a real ffmpeg encode end

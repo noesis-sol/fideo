@@ -215,21 +215,22 @@ drives the TUI through a pseudo-terminal.
   `TestMarkInPlaceCollisions`, `TestMarkInPlaceCollisionsPlainOverwrite`,
   `TestStartProcessingResetsBatchState`; `handlers_test.go`
   `TestProcessingStartUnderCancelKeepsSlot`, `TestBatchJobs`,
-  `TestNavigationWhileProcessing`; `view_test.go` `TestUpdateTracksScrollOffset`.
+  `TestNavigationWhileProcessing`; `view_test.go` `TestUpdateTracksScrollOffset`;
+  `batch_messages_test.go` (worker messages through `dispatch`, with a fake
+  launcher in `model.launch`): `TestDoneStartsNextPendingFile`,
+  `TestLastDoneSettlesBatch` (done, or not done when cancelled),
+  `TestErrorSettlesBatchAsDone`, `TestErrorStartsNextPendingFile`,
+  `TestErrorForLaunchingFileKeepsProcessingCount`, `TestCancelResetsFile`
+  (processing and launching files), `TestCancelSettlesOnLastWorker`,
+  `TestInfoMessagesSetFields`, `TestSpinnerTick`, `TestAutoStartStartsProcessing`.
 - **Untested**:
   - Keys while idle: `space` toggling selection and dropping the output claim,
     `a` selecting every pending file, `enter` starting, `q`/`esc`/`ctrl+c`
     quitting only when idle, `c` cancelling several in-flight encodes (one
     is covered by `TestProcessingStartUnderCancelKeepsSlot`).
-  - Worker messages: `handleDone`, `handleError` updating counts, releasing
-    the slot, starting the next file and settling the batch as done (with or
-    without errors); `handleCancel` with several workers and for a file that
-    was processing (one launching worker is covered); `handleProgress`,
-    `handleVideoInfo`, `handleOutputInfo`; spinner ticks ignored when idle;
-    `autoStartMsg`.
-  - Launching work: anything that reaches `startFile` starts a real worker
-    (ffprobe, ffmpeg, the global `program`), so tests that start a file need a
-    seam for the launch.
+  - Launching work: `startFile` calls `model.launch` (nil means
+    `processFile`), so a test that starts a file sets a fake launcher; the
+    real launch is covered by the worker integration tests.
 
 - **Tickets**: fideo-atq.14 (worker messages, adds the launch seam),
   fideo-atq.15 (keys).

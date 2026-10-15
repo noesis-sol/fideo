@@ -17,7 +17,11 @@ func (m model) startFile(idx int) tea.Cmd {
 	jobs := m.batchJobs()
 	ctx, cancel := context.WithCancel(context.Background())
 	m.cancels[idx] = cancel
-	return m.processFile(idx, ctx, cancel, jobs)
+	launch := m.launch
+	if launch == nil {
+		launch = model.processFile
+	}
+	return launch(m, idx, ctx, cancel, jobs)
 }
 
 // batchJobs is how many encodes will run side by side from this point in the
