@@ -33,22 +33,20 @@ drives the TUI through a pseudo-terminal.
 
 - **Reached by**: `fideo [--format mp4|mov|mkv|webm] [--size sm|md|lg] [--hw]
   [--overwrite] [--] [path|pattern ...]`, `fideo --help` / `-h`.
-  Code: `parseArgs`, `flagValue`, `Run` in `app.go`; `validFormats`,
-  `validSizes` in `config.go`.
+  Code: `parseArgs`, `flagValue`, `buildConfig`, `applyHW`, `Run` in
+  `app.go`; `validFormats`, `validSizes` in `config.go`.
 - **Tests** (unit): `app_test.go` `TestParseArgs` (flags in any order, inline
   and separate values, `--help`/`-h`, unknown options rejected, boolean flag
   with a value rejected, `--` passes dashed names, missing and empty values);
-  `inplace_test.go` `TestParseArgsOverwrite`.
+  `inplace_test.go` `TestParseArgsOverwrite`; `cli_config_test.go` (what `Run`
+  decides after parsing, via `buildConfig` and `applyHW`: `--format`
+  lowercased, unsupported format and size errors with their hints, the
+  `sm/small/md/medium/lg/large` presets, the `mp4` default and its absence
+  under `--overwrite`, `--hw` refused with `--format webm`, `--hw` capping
+  concurrency at 2, the software fallback warning, the WebM-source warning
+  count under `--hw --overwrite`; and the single-dash aliases `-format`,
+  `-size`, `-hw`).
 - **Untested**:
-  - Everything `Run` decides after parsing, which is inline and calls
-    `os.Exit`: `--format` lowercased (`--format MP4`), unsupported format and
-    size errors, the `sm/small/md/medium/lg/large` presets mapping to
-    540/1080/2160, the default format being `mp4` except under `--overwrite`
-    (empty, keep each container), `--hw` refused with `--format webm`, `--hw`
-    capping concurrency at 2, the warning count for WebM sources under
-    `--hw --overwrite`, the software fallback warning when no hardware encoder
-    initializes.
-  - The single-dash aliases `-format`, `-size`, `-hw` in `parseArgs`.
   - The binary itself: `--help` printing usage and exiting 0, usage errors
     exiting 1 with "Run 'fideo --help' for usage.", a missing path, a
     non-video file, a directory or pattern with no videos.

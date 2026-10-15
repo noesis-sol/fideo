@@ -201,6 +201,95 @@ func createModelFromPaths(paths []string) (model, error) {
 	return newModel(allFiles), nil
 }
 
+// buildConfig applies the parsed options to base and validates them: --format
+// (case-insensitive), --size, and --hw against the output container. It returns
+// the error Run prints rather than exiting, and never execs ffmpeg, so the
+// option rules are unit-testable; the hardware encoder is settled by applyHW.
+func buildConfig(opts cliOptions, base compressionConfig) (compressionConfig, error) {
+	cfg := base
+
+	// Container names are case-insensitive on the command line (--format MP4),
+	// like the --size presets.
+	format := strings.ToLower(opts.format)
+	if format != "" && !validFormats[format] {
+		return cfg, fmt.Errorf("unsupported format %q\nSupported formats: mp4, mov, mkv, webm", opts.format)
+	}
+
+	// Default to mp4 rather than preserving the source container, so a WebM (or
+	// any) input isn't forced through the slow software VP9 encoder. In overwrite
+	// mode an unspecified --format instead means "keep each file's own container",
+	// so a plain --overwrite recompresses in place without converting the file (and
+	// deleting the original under a new extension).
+	if format == "" && !opts.overwrite {
+		format = defaultOutputFormat
+	}
+
+	if opts.hw && !profileFor(format).allowsHW {
+		// h264_videotoolbox emits H.264, which a WebM container can't hold;
+		// WebM always goes through the software VP9 encoder instead.
+		return cfg, fmt.Errorf("--hw is not compatible with --format %s (it requires a software codec)", format)
+	}
+
+	if opts.size != "" {
+		res, ok := validSizes[strings.ToLower(opts.size)]
+		if !ok {
+			return cfg, fmt.Errorf("unsupported size %q\nSupported sizes: sm, small, md, medium, lg, large", opts.size)
+		}
+		cfg.resolution = res
+	}
+
+	cfg.outputFormat = format
+	cfg.hwAccel = opts.hw
+	cfg.inPlace = opts.overwrite
+	return cfg, nil
+}
+
+// hwMaxConcurrent caps parallel jobs under --hw. Hardware encoders offload to a
+// small fixed number of dedicated engines (Apple Silicon: 1 on base/Pro, 2 on
+// Max, 4 on Ultra; NVENC/QSV/AMF likewise cap concurrent sessions) — unrelated
+// to CPU count. Oversubscribing just serializes at the driver while adding
+// per-process memory and scheduling overhead, so we cap low. A little
+// parallelism still overlaps each file's probe, audio encode, and I/O with
+// another file's video encode.
+const hwMaxConcurrent = 2
+
+// applyHW settles --hw for the batch: it resolves the hardware encoder through
+// resolve (resolveHWEncoder in production, a stub in tests), caps concurrency,
+// and returns the warnings Run prints. Without --hw it returns cfg unchanged.
+func applyHW(cfg compressionConfig, files []videoFile, resolve func() (string, error)) (compressionConfig, []string) {
+	if !cfg.hwAccel {
+		return cfg, nil
+	}
+	encoder, err := resolve()
+	if err != nil {
+		// No usable hardware encoder — fall back to software instead of
+		// failing every file. resolveHWEncoder only errors after a real
+		// probe-encode failed, so software (libx264) is the correct path.
+		cfg.hwAccel = false
+		return cfg, []string{fmt.Sprintf("%v\nFalling back to software (libx264) encoding.", err)}
+	}
+	cfg.hwEncoder = encoder
+	cfg.maxConcurrent = min(cfg.maxConcurrent, hwMaxConcurrent)
+
+	// In overwrite mode without --format (outputFormat == ""), each file keeps its
+	// own container. A WebM source can't carry H.264, so --hw silently falls back
+	// to software VP9 for it — warn rather than let the user believe hardware
+	// encoding applied to every file.
+	if cfg.outputFormat != "" {
+		return cfg, nil
+	}
+	webm := 0
+	for _, f := range files {
+		if !profileFor(containerOf(f.path)).allowsHW {
+			webm++
+		}
+	}
+	if webm == 0 {
+		return cfg, nil
+	}
+	return cfg, []string{fmt.Sprintf("--hw cannot produce WebM (VP9) output; %d source(s) will be encoded with software VP9 instead.", webm)}
+}
+
 // Run is the application entry point: it parses CLI flags and positional
 // paths, checks dependencies, builds the initial model, and starts the Bubble
 // Tea program. It owns process exit codes (via os.Exit) so cmd/fideo stays a
@@ -223,38 +312,10 @@ func Run() {
 		os.Exit(1)
 	}
 
-	// Container names are case-insensitive on the command line (--format MP4),
-	// like the --size presets.
-	format := strings.ToLower(opts.format)
-	if format != "" && !validFormats[format] {
-		fmt.Fprintf(os.Stderr, "Error: unsupported format %q\nSupported formats: mp4, mov, mkv, webm\n", opts.format)
+	cfg, err := buildConfig(opts, defaultConfig)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
-	}
-
-	// Default to mp4 rather than preserving the source container, so a WebM (or
-	// any) input isn't forced through the slow software VP9 encoder. In overwrite
-	// mode an unspecified --format instead means "keep each file's own container",
-	// so a plain --overwrite recompresses in place without converting the file (and
-	// deleting the original under a new extension).
-	if format == "" && !opts.overwrite {
-		format = defaultOutputFormat
-	}
-
-	if opts.hw && !profileFor(format).allowsHW {
-		// h264_videotoolbox emits H.264, which a WebM container can't hold;
-		// WebM always goes through the software VP9 encoder instead.
-		fmt.Fprintf(os.Stderr, "Error: --hw is not compatible with --format %s (it requires a software codec)\n", format)
-		os.Exit(1)
-	}
-
-	var resolution string
-	if opts.size != "" {
-		res, ok := validSizes[strings.ToLower(opts.size)]
-		if !ok {
-			fmt.Fprintf(os.Stderr, "Error: unsupported size %q\nSupported sizes: sm, small, md, medium, lg, large\n", opts.size)
-			os.Exit(1)
-		}
-		resolution = res
 	}
 
 	var m model
@@ -268,53 +329,12 @@ func Run() {
 		m = initialModel(".")
 	}
 
-	if resolution != "" {
-		m.config.resolution = resolution
+	cfg, warnings := applyHW(cfg, m.files, resolveHWEncoder)
+	for _, w := range warnings {
+		fmt.Fprintf(os.Stderr, "Warning: %s\n", w)
 	}
-	m.config.outputFormat = format
-	m.config.hwAccel = opts.hw
-	m.config.inPlace = opts.overwrite
-	if opts.hw {
-		encoder, err := resolveHWEncoder()
-		if err != nil {
-			// No usable hardware encoder — fall back to software instead of
-			// failing every file. resolveHWEncoder only errors after a real
-			// probe-encode failed, so software (libx264) is the correct path.
-			fmt.Fprintf(os.Stderr, "Warning: %v\nFalling back to software (libx264) encoding.\n", err)
-			m.config.hwAccel = false
-		} else {
-			m.config.hwEncoder = encoder
-
-			// Hardware encoders offload to a small fixed number of dedicated
-			// engines (Apple Silicon: 1 on base/Pro, 2 on Max, 4 on Ultra;
-			// NVENC/QSV/AMF likewise cap concurrent sessions) — unrelated to CPU
-			// count. Oversubscribing just serializes at the driver while adding
-			// per-process memory and scheduling overhead, so we cap low. A little
-			// parallelism still overlaps each file's probe, audio encode, and I/O
-			// with another file's video encode.
-			const hwMaxConcurrent = 2
-			if hwMaxConcurrent < m.config.maxConcurrent {
-				m.config.maxConcurrent = hwMaxConcurrent
-			}
-		}
-	}
+	m.config = cfg
 	m.videoService = newVideoService(m.config)
-
-	// In overwrite mode without --format (format == ""), each file keeps its own
-	// container. A WebM source can't carry H.264, so --hw silently falls back to
-	// software VP9 for it — warn rather than let the user believe hardware encoding
-	// applied to every file.
-	if m.config.hwAccel && format == "" {
-		webm := 0
-		for _, f := range m.files {
-			if !profileFor(containerOf(f.path)).allowsHW {
-				webm++
-			}
-		}
-		if webm > 0 {
-			fmt.Fprintf(os.Stderr, "Warning: --hw cannot produce WebM (VP9) output; %d source(s) will be encoded with software VP9 instead.\n", webm)
-		}
-	}
 
 	program = tea.NewProgram(m, tea.WithoutSignalHandler())
 
