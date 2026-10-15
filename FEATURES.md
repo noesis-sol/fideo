@@ -247,11 +247,14 @@ drives the TUI through a pseudo-terminal.
   `select_all_test.go` `TestSelectAllKey` (`a` selects or deselects every
   pending file without starting), `TestSelectAllThenEnterStartsBatch`,
   `TestSelectAllIgnoredWhileProcessing`.
+  `picker_keys_test.go` `TestSpaceTogglesSelection` (and drops a pending
+  file's output claim), `TestSpaceIgnoredWhileProcessing`,
+  `TestEnterStartsOnlySelected`, `TestEnterWithNothingSelected`,
+  `TestQuitKeys` (`q`/`esc`/`ctrl+c` quit when idle, `q`/`esc` do nothing
+  while processing), `TestCIsIgnoredWhenIdle`,
+  `TestCancelKeysCancelEveryInFlightEncode` (`c`/`ctrl+c` with several
+  workers), `TestKeysOnEmptyList`.
 - **Untested**:
-  - Keys while idle: `space` toggling selection and dropping the output claim,
-    `enter` starting, `q`/`esc`/`ctrl+c`
-    quitting only when idle, `c` cancelling several in-flight encodes (one
-    is covered by `TestProcessingStartUnderCancelKeepsSlot`).
   - Launching work: `startFile` calls `model.launch` (nil means
     `processFile`), so a test that starts a file sets a fake launcher; the
     real launch is covered by the worker integration tests.
