@@ -96,11 +96,12 @@ drives the TUI through a pseudo-terminal.
   the source itself under `--overwrite`. Code: `getOutputPath`, `inPlaceDest`,
   `tempOutputPath`, `resolveOutputPath` in `encode.go`.
 - **Tests** (unit): `inplace_test.go` `TestInPlaceDest`, `TestTempOutputPath`,
-  `TestTempOutputPathUnique`, `TestResolveOutputPathInPlace`.
-- **Untested**: `getOutputPath` (prefix, extension swap, no format keeps the
-  extension); `resolveOutputPath` outside `--overwrite`: two sources sharing a
-  stem (`a.mp4`, `a.mov` -> `out_a.mp4`, `out_a_mov.mp4`), the numeric suffix
-  when that is taken too, case-only differences treated as one path.
+  `TestTempOutputPathUnique`, `TestResolveOutputPathInPlace`;
+  `output_naming_test.go` `TestGetOutputPath` (prefix, extension swap, no
+  format keeps the extension, directory kept),
+  `TestResolveOutputPathDisambiguates` (`a.mp4`, `a.mov`, `a.MOV` ->
+  `out_a.mp4`, `out_a_mov.mp4`, `out_a-1.mp4`; case-only claims taken),
+  `TestResolveOutputPathIgnoresOwnClaim`.
 
 - **Tickets**: fideo-atq.7.
 
