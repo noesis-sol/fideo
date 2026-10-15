@@ -132,6 +132,9 @@ Tests live beside the code in `internal/fideo` (white-box, `package fideo`).
   is split from the ffprobe exec, and `parseArgs` returns errors instead of
   exiting — so progress coalescing, probe parsing, and CLI parsing are all tested
   without a running program or a real ffmpeg.
+  The `processFile` worker sends through `videoService.send` (defaulting to the
+  package `program`'s Send), so a test swaps in a collector and runs the worker
+  without a Bubble Tea program.
 
 - **Integration tests** — `go test -tags=integration ./...`. Behind the
   `integration` build tag: they generate a tiny clip, run a real ffmpeg encode end

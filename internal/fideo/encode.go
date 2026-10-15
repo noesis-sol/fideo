@@ -25,10 +25,15 @@ type videoService struct {
 	// workers tracks the per-file worker goroutines so Run() can wait for their
 	// cleanup (partial-output removal) after the UI has closed; see waitWorkers.
 	workers sync.WaitGroup
+	// send delivers a worker's messages to the UI. It defaults to the package
+	// program's Send; a test swaps in a collector to run processFile without a
+	// running Bubble Tea program.
+	send func(tea.Msg)
 }
 
 func newVideoService(config compressionConfig) *videoService {
-	return &videoService{config: config}
+	// program is only set once Run() has built the model, so resolve it per call.
+	return &videoService{config: config, send: func(msg tea.Msg) { program.Send(msg) }}
 }
 
 // workerDrainTimeout bounds how long Run() waits for workers after the UI
@@ -775,10 +780,10 @@ func (m model) processFile(idx int, ctx context.Context, cancel context.CancelFu
 		reportFailure := func(err error) {
 			if ctx.Err() != nil {
 				_ = os.Remove(output)
-				program.Send(cancelMsg{idx: idx})
+				vs.send(cancelMsg{idx: idx})
 				return
 			}
-			program.Send(errorMsg{idx: idx, err: err})
+			vs.send(errorMsg{idx: idx, err: err})
 		}
 
 		meta, err := vs.probeMetadata(ctx, path)
@@ -786,7 +791,7 @@ func (m model) processFile(idx int, ctx context.Context, cancel context.CancelFu
 			reportFailure(fmt.Errorf("failed to probe video: %w", err))
 			return
 		}
-		program.Send(videoInfoMsg{idx: idx, info: vs.formatVideoInfo(path, meta)})
+		vs.send(videoInfoMsg{idx: idx, info: vs.formatVideoInfo(path, meta)})
 
 		cmd := vs.buildFFmpegCommand(ctx, path, output, meta, jobs)
 
@@ -806,12 +811,12 @@ func (m model) processFile(idx int, ctx context.Context, cancel context.CancelFu
 			return
 		}
 
-		program.Send(processingStartMsg{idx: idx})
+		vs.send(processingStartMsg{idx: idx})
 
 		progressDone := make(chan struct{})
 		go func() {
 			defer close(progressDone)
-			streamProgress(stdout, idx, meta.duration, program.Send)
+			streamProgress(stdout, idx, meta.duration, vs.send)
 		}()
 
 		var stderrDetail string
@@ -837,7 +842,7 @@ func (m model) processFile(idx int, ctx context.Context, cancel context.CancelFu
 			// In-place runs remove the scratch temp here, never the source.
 			if ctx.Err() != nil {
 				_ = os.Remove(output)
-				program.Send(cancelMsg{idx: idx})
+				vs.send(cancelMsg{idx: idx})
 				return
 			}
 
@@ -851,7 +856,7 @@ func (m model) processFile(idx int, ctx context.Context, cancel context.CancelFu
 			// non-in-place run this is the out_ file; in-place, the scratch temp.
 			// Never the source: output is always the freshly-written destination.
 			_ = os.Remove(output)
-			program.Send(errorMsg{idx: idx, err: errors.New(errMsg)})
+			vs.send(errorMsg{idx: idx, err: errors.New(errMsg)})
 			return
 		}
 
@@ -861,18 +866,18 @@ func (m model) processFile(idx int, ctx context.Context, cancel context.CancelFu
 		if inPlace {
 			note, err := finishInPlace(output, finalDest, path)
 			if err != nil {
-				program.Send(errorMsg{idx: idx, err: err})
+				vs.send(errorMsg{idx: idx, err: err})
 				return
 			}
 			if note != "" {
 				// No Out: line — the output is the untouched source, already shown as In:.
-				program.Send(doneMsg{idx: idx, note: note})
+				vs.send(doneMsg{idx: idx, note: note})
 				return
 			}
 		}
 
-		program.Send(outputInfoMsg{idx: idx, info: vs.getVideoInfo(ctx, finalDest)})
-		program.Send(doneMsg{idx: idx})
+		vs.send(outputInfoMsg{idx: idx, info: vs.getVideoInfo(ctx, finalDest)})
+		vs.send(doneMsg{idx: idx})
 	}()
 
 	return nil

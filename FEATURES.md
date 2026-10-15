@@ -173,15 +173,17 @@ drives the TUI through a pseudo-terminal.
   `TestFirstLine`;
   `inplace_keep_test.go` `TestFinishInPlace` (replace, keep a larger or equal
   re-encode, format conversion), `TestFinishInPlaceNoteSizes`,
-  `TestFinishInPlaceRenameFailure`, `TestHandleDoneRecordsNote`.
-- **Untested**: `processFile` itself. It sends through the package global
-  `program`, so a test needs a seam for the send function. Not covered: the
-  messages of a successful encode (info, start, progress, output info, done);
-  `--overwrite` replacing the source, removing it after a format change and
-  keeping it when the name is unchanged; a probe failure; an ffmpeg failure
-  reporting its stderr detail and removing the partial output; a cancel
-  removing the partial output (the scratch file, never the source under
-  `--overwrite`); an invalid index.
+  `TestFinishInPlaceRenameFailure`, `TestHandleDoneRecordsNote`;
+  `worker_test.go` `TestProcessFileInvalidIndex`.
+  (integration): `worker_integration_test.go`
+  `TestProcessFileSuccessIntegration` runs `processFile` on a real clip, with
+  `videoService.send` swapped for a collector: the messages of a successful
+  encode in order (info, start, progress, output info, done) and the files
+  left: the `out_` copy, `--overwrite` replacing the source with no scratch
+  file, and `--overwrite --format mp4` turning `clip.mov` into `clip.mp4`.
+- **Untested**: a probe failure; an ffmpeg failure reporting its stderr
+  detail and removing the partial output; a cancel removing the partial
+  output (the scratch file, never the source under `--overwrite`).
 
 - **Tickets**: fideo-atq.12 (success and in-place), fideo-atq.13 (failure
   and cancel).
