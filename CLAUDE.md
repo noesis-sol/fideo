@@ -208,7 +208,10 @@ encode.go (`ffmpegArgs` / `profileFor`).
   prompts before clobbering it. Two selected sources that would map to the same
   in-place destination (e.g. `clip.mov` and `clip.mp4` under `--format mp4`) are
   refused with a per-file error — there is no safe disambiguation in this mode —
-  while the rest of the batch proceeds (see `markInPlaceCollisions`).
+  while the rest of the batch proceeds (see `markInPlaceCollisions`). Destinations
+  that differ only in case (`clip.MOV` / `clip.mov`) collide only where the
+  filesystem makes them one file (`sameDestination`), so a case-sensitive
+  filesystem lets both through.
 
 ## Rendering & Performance Notes
 

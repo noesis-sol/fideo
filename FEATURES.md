@@ -221,7 +221,10 @@ drives the TUI through a pseudo-terminal.
   `dispatch`).
 - **Tests** (unit): `fixes_test.go` `TestFillSlotsSkipsLaunchedFile`,
   `TestFillSlotsCapacityCountsInFlight`, `TestFillSlotsPromptsOnDistinctInPlaceDest`,
-  `TestMarkInPlaceCollisions`, `TestMarkInPlaceCollisionsPlainOverwrite`,
+  `TestMarkInPlaceCollisions`, `TestMarkInPlaceCollisionsPlainOverwrite`;
+  `inplace_collision_case_test.go` `TestMarkInPlaceCollisionsCaseOnly`,
+  `TestSameDestination` (case-only destinations, asserted per the host
+  filesystem's case sensitivity); `fixes_test.go`
   `TestStartProcessingResetsBatchState`; `handlers_test.go`
   `TestProcessingStartUnderCancelKeepsSlot`, `TestBatchJobs`,
   `TestNavigationWhileProcessing`; `view_test.go` `TestUpdateTracksScrollOffset`;

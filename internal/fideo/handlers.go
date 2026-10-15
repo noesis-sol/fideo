@@ -150,35 +150,67 @@ func (m model) batchSettled() bool {
 // distinct sources cannot both be replaced in place into one path without losing
 // data, and the in-place contract forbids out_-style disambiguation, so the only
 // safe action is to refuse the colliding files while letting the rest proceed.
-// Destinations are compared case-folded so clip.MP4/clip.mp4 collide on a
-// case-insensitive filesystem too. A no-op outside in-place mode, and when
-// outputFormat is empty (plain --overwrite) every destination equals its own
-// unique source, so nothing collides.
+// Destinations that differ only in case are asked of the filesystem
+// (sameDestination): clip.MP4/clip.mp4 collide on a case-insensitive filesystem
+// but are two files on a case-sensitive one. A no-op outside in-place mode.
 func (m *model) markInPlaceCollisions() {
 	if !m.config.inPlace {
 		return
 	}
 	dests := make([]string, len(m.files))
-	counts := make(map[string]int)
+	groups := make(map[string][]int)
 	for i := range m.files {
 		if !m.files[i].selected || m.files[i].status != statusPending {
 			continue
 		}
-		d := strings.ToLower(inPlaceDest(m.files[i].path, m.config.outputFormat))
-		dests[i] = d
-		counts[d]++
+		dests[i] = inPlaceDest(m.files[i].path, m.config.outputFormat)
+		key := strings.ToLower(dests[i])
+		groups[key] = append(groups[key], i)
+	}
+	collided := make([]bool, len(m.files))
+	for _, group := range groups {
+		for a, i := range group {
+			for _, j := range group[a+1:] {
+				if sameDestination(dests[i], dests[j], m.files[i].path) {
+					collided[i], collided[j] = true, true
+				}
+			}
+		}
 	}
 	for i := range m.files {
-		if dests[i] == "" || counts[dests[i]] <= 1 {
-			continue
+		if collided[i] {
+			m.markInPlaceCollision(i, dests[i])
 		}
-		m.files[i].status = statusError
-		m.files[i].err = fmt.Errorf(
-			"skipped: multiple selected inputs map to the same in-place destination %q under --format %s; rename one or drop --format",
-			filepath.Base(inPlaceDest(m.files[i].path, m.config.outputFormat)), m.config.outputFormat)
-		m.files[i].outPath = ""
-		m.err = m.files[i].err
 	}
+}
+
+// markInPlaceCollision refuses file i, whose in-place destination dest another
+// selected file shares.
+func (m *model) markInPlaceCollision(i int, dest string) {
+	m.files[i].status = statusError
+	m.files[i].err = fmt.Errorf(
+		"skipped: multiple selected inputs map to the same in-place destination %q under --format %s; rename one or drop --format",
+		filepath.Base(dest), m.config.outputFormat)
+	m.files[i].outPath = ""
+	m.err = m.files[i].err
+}
+
+// sameDestination reports whether in-place destinations a and b, which are equal
+// ignoring case, name one file; srcA is the source whose destination is a.
+// Identical spellings always do. Otherwise the filesystem decides, never the
+// spelling: when either destination exists, sameFile tells whether the other
+// spelling reaches it. When neither exists yet, both are --format conversions
+// sharing one extension and differing only in their stems, so the question is
+// put to srcA instead: re-spelled with b's stem, does it still name srcA?
+func sameDestination(a, b, srcA string) bool {
+	if a == b {
+		return true
+	}
+	if pathExists(a) || pathExists(b) {
+		return sameFile(a, b)
+	}
+	respelled := strings.TrimSuffix(b, filepath.Ext(b)) + filepath.Ext(srcA)
+	return sameFile(srcA, respelled)
 }
 
 func (m *model) startProcessing() tea.Cmd {
