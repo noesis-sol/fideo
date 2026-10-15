@@ -117,11 +117,14 @@ drives the TUI through a pseudo-terminal.
   `TestContainerOf`; `platform_test.go` `TestDecodeArgsPerOS`;
   `fixes_test.go` `TestEvenHeightScaleFilter`; `portrait_scale_test.go`
   `TestScaleFilterCapsShortSide` (sm/md/lg filters); `stream_test.go`
-  `TestThreadBudgetScalesWithBatch`, `TestConcurrentJobs`.
+  `TestThreadBudgetScalesWithBatch`, `TestConcurrentJobs`;
+  `opus_layout_test.go` `TestOpusAudioRemapsChannelLayout` (webm's aformat).
   (integration): `integration_test.go` `TestEncodeIntegration` (a real 320x240
   encode to mp4, output probed as 240p H.264);
   `portrait_scale_integration_test.go` `TestScaleShortSideIntegration`
-  (portrait, landscape, square and odd-sized encodes, output size probed).
+  (portrait, landscape, square and odd-sized encodes, output size probed);
+  `opus_layout_integration_test.go` `TestWebMSideLayoutIntegration` (a
+  5.1(side) AC3 source encoded to webm keeps six Opus channels).
 - **Untested**: full argument lists for NVENC, QSV and AMF (only their codec
   arguments are checked); `profileFor` for an unknown container; `autoThreadsPerJob` below
   one job; `autoMaxConcurrent`'s clamp to [2, 4] (it reads

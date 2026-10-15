@@ -599,8 +599,19 @@ func aacAudio(c compressionConfig) []string {
 	return []string{"-c:a", "aac", "-b:a", c.audioBitrate}
 }
 
+// opusLayouts are the channel layouts libopus accepts: the Vorbis layouts it
+// maps (mapping family -1/1). Common AC3/DTS 5.1 in MKV is 5.1(side), which
+// libopus refuses ("Invalid channel layout 5.1(side)"), so the aformat filter
+// remaps any other layout onto the nearest of these — side channels onto back
+// ones for 5.1(side), a downmix for layouts with no same-sized match. A source
+// already in one of these layouts, or with no audio at all, passes untouched.
+const opusLayouts = "mono|stereo|3.0|quad|5.0|5.1|6.1|7.1"
+
 func opusAudio(c compressionConfig) []string {
-	return []string{"-c:a", "libopus", "-b:a", c.audioBitrate}
+	return []string{
+		"-af", "aformat=channel_layouts=" + opusLayouts,
+		"-c:a", "libopus", "-b:a", c.audioBitrate,
+	}
 }
 
 // streamProgress reads ffmpeg's -progress stream on stdout and forwards percent

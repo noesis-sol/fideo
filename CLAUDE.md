@@ -172,7 +172,10 @@ encode.go (`ffmpegArgs` / `profileFor`).
   HDR phone clips, 4:2:2 ProRes, and 4:4:4 screen recordings don't yield High 10 /
   High 4:2:2 profiles that many players and hardware decoders refuse. No
   tone-mapping is done, so HDR sources come out SDR-flat.
-- Audio: AAC at 96k (Opus at 96k for webm)
+- Audio: AAC at 96k (Opus at 96k for webm). For webm an `aformat` filter
+  (`opusLayouts`) maps the source's channel layout onto one libopus accepts, so a
+  5.1(side) AC3/DTS track from an MKV becomes 5.1 instead of failing to open the
+  encoder ("Invalid channel layout 5.1(side)")
 - Concurrency: software encodes are thread-capped per job so parallel jobs don't
   thrash. The budget is `NumCPU / jobs`, where `jobs` is what will actually run
   side by side — in-flight plus still-queued files, capped at `maxConcurrent`

@@ -219,6 +219,7 @@ func TestFFmpegArgsGolden(t *testing.T) {
 				"-c:v", "libvpx-vp9", "-crf", "28", "-b:v", "0", "-row-mt", "1", "-threads", threads,
 				"-vf", scaleFilter("1080"),
 				"-pix_fmt", "yuv420p",
+				"-af", "aformat=channel_layouts=mono|stereo|3.0|quad|5.0|5.1|6.1|7.1",
 				"-c:a", "libopus", "-b:a", "96k",
 				"-progress", "pipe:1", "-loglevel", "error", "-y", "out_video.webm",
 			},
