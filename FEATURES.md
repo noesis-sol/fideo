@@ -212,12 +212,14 @@ drives the TUI through a pseudo-terminal.
   `handleOverwriteSkip`, `cancelAll` in `handlers.go`;
   `renderOverwriteDialog` in `view.go`.
 - **Tests** (unit): `fixes_test.go` `TestFillSlotsPromptsOnDistinctInPlaceDest`
-  (the in-place case only).
+  (the in-place case only); `cancel_all_test.go`
+  `TestCancelAllWithNothingInFlight`, `TestCancelAllWaitsForLaunchingWorker`
+  (Cancel all dropping the queue, settling on `m.cancels` and not reporting
+  "All done!").
 - **Untested**: the prompt for an existing `out_` file; the prompt's keys
-  (up/down clamped to its three options, `enter` on each, `ctrl+c` cancelling
-  in-flight encodes and quitting); Overwrite starting the file; Skip
-  deselecting it, releasing its claim and settling the batch; Cancel all
-  dropping the queue (see bug fideo-849).
+  (up/down clamped to its three options, `enter` on Overwrite and Skip,
+  `ctrl+c` cancelling in-flight encodes and quitting); Overwrite starting the
+  file; Skip deselecting it, releasing its claim and settling the batch.
 
 - **Tickets**: fideo-atq.16.
 

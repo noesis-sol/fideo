@@ -487,6 +487,11 @@ func (m model) cancelAll() model {
 		cancel()
 	}
 	for i := range m.files {
+		// A launched-but-unconfirmed worker is still statusPending; it is being
+		// cancelled above, not dropped from the queue, so leave it to its cancelMsg.
+		if _, inFlight := m.cancels[i]; inFlight {
+			continue
+		}
 		if m.files[i].selected && m.files[i].status == statusPending {
 			m.files[i].selected = false
 			m.files[i].outPath = "" // release the claim; not being written
@@ -495,11 +500,14 @@ func (m model) cancelAll() model {
 			}
 		}
 	}
-	if m.processingCount == 0 {
+	// Settle like the 'c' cancel path: on m.cancels (batchSettled), not
+	// processingCount, which lags a launched worker until its processingStartMsg
+	// — going idle on it would accept enter while that worker is still alive.
+	// Any worker still registered settles the batch from its own cancelMsg. A
+	// cancelled batch is not "done": it drops back to the picker rather than
+	// reporting "All done!" for files that were never encoded.
+	if m.batchSettled() {
 		m.processing = false
-		if m.totalToProcess == 0 {
-			m.done = true
-		}
 	}
 	return m
 }
