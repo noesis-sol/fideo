@@ -142,6 +142,10 @@ Tests live beside the code in `internal/fideo` (white-box, `package fideo`).
   `integration` build tag: they generate a tiny clip, run a real ffmpeg encode end
   to end, then ffprobe the result. Skipped automatically when ffmpeg/ffprobe are
   not on PATH, so the default `go test` stays hermetic.
+  `hw_encode_integration_test.go` runs `--hw` on the host's own hardware encoder
+  (skipped without one); on a GPU host, run it with
+  `FIDEO_HW_ENCODER=h264_nvenc` (or `h264_qsv`, `h264_amf`) so it fails rather
+  than skips when that encoder isn't the one chosen.
 
 - **Local Linux reproduction** — `docker build -f Dockerfile.test -t fideo-test .`
   then `docker run --rm fideo-test`. Runs vet + unit + integration on Linux with

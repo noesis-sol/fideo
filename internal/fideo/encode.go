@@ -243,6 +243,9 @@ func containerOf(outputPath string) string {
 // ffmpegArgs assembles the full ffmpeg argument list for one encode. It is a
 // pure function of its inputs (no exec, no process), so the command can be
 // unit-tested in isolation; buildFFmpegCommand only wraps it in an *exec.Cmd.
+// outputPixFmt is the pixel format every encode asks for (see ffmpegArgs).
+const outputPixFmt = "yuv420p"
+
 func (vs *videoService) ffmpegArgs(inputPath, outputPath string, meta videoMetadata, jobs int) []string {
 	p := profileFor(containerOf(outputPath))
 
@@ -261,8 +264,11 @@ func (vs *videoService) ffmpegArgs(inputPath, outputPath string, meta videoMetad
 	// phone clip or a 4:2:2 ProRes/screen recording makes libx264 emit High 10 /
 	// High 4:2:2 profiles that QuickTime, browsers, and hardware decoders often
 	// refuse; yuv420p is what every H.264/VP9 decoder handles. Hardware encoders
-	// that want nv12 accept it too — ffmpeg converts on the way in.
-	args = append(args, "-pix_fmt", "yuv420p")
+	// that want nv12 (h264_qsv lists nv12 but not yuv420p) accept it too: ffmpeg
+	// auto-selects the encoder's closest format and converts on the way in.
+	// probeArgs asks for the same format, so --hw only picks an encoder that
+	// takes this request.
+	args = append(args, "-pix_fmt", outputPixFmt)
 	args = append(args, p.audio(vs.config)...)
 	args = append(args, p.muxFlags...)
 	args = append(args, "-progress", "pipe:1", "-loglevel", "error", "-y", safeArgPath(outputPath))
@@ -437,10 +443,7 @@ const hwProbeTimeout = 6 * time.Second
 func probeEncode(codec string) probeResult {
 	ctx, cancel := context.WithTimeout(context.Background(), hwProbeTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "ffmpeg", "-hide_banner", "-loglevel", "error",
-		"-f", "lavfi", "-i", "color=c=black:s=64x64:d=0.1",
-		"-c:v", codec, "-f", "null", "-")
-	err := cmd.Run()
+	err := exec.CommandContext(ctx, "ffmpeg", probeArgs(codec)...).Run()
 	if err == nil {
 		return probeOK
 	}
@@ -448,6 +451,16 @@ func probeEncode(codec string) probeResult {
 		return probeTimedOut
 	}
 	return probeFailed
+}
+
+// probeArgs is the ffmpeg command line of a probe-encode. It requests the same
+// output pixel format as a real encode (ffmpegArgs), so an encoder that would
+// reject that request fails here, at startup, and --hw falls back to software
+// instead of every file failing on it.
+func probeArgs(codec string) []string {
+	return []string{"-hide_banner", "-loglevel", "error",
+		"-f", "lavfi", "-i", "color=c=black:s=64x64:d=0.1",
+		"-c:v", codec, "-pix_fmt", outputPixFmt, "-f", "null", "-"}
 }
 
 // lavfiProbeUsable reports whether the probe harness itself works — i.e. ffmpeg
