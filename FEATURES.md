@@ -255,11 +255,14 @@ drives the TUI through a pseudo-terminal.
   (the in-place case only); `cancel_all_test.go`
   `TestCancelAllWithNothingInFlight`, `TestCancelAllWaitsForLaunchingWorker`
   (Cancel all dropping the queue, settling on `m.cancels` and not reporting
-  "All done!").
-- **Untested**: the prompt for an existing `out_` file; the prompt's keys
-  (up/down clamped to its three options, `enter` on Overwrite and Skip,
-  `ctrl+c` cancelling in-flight encodes and quitting); Overwrite starting the
-  file; Skip deselecting it, releasing its claim and settling the batch.
+  "All done!"); `overwrite_prompt_test.go` (existing `out_` files in a temp
+  dir, a fake launcher in `model.launch`): `TestExistingOutputRaisesPrompt`,
+  `TestPromptCursorMovesAndClamps`, `TestOverwriteStartsConfirmedFile`,
+  `TestOverwriteFillsRemainingSlots`, `TestSkipDeselectsAndStartsNext`,
+  `TestSkipLastFileSettlesBatch`, `TestSkipWaitsForInFlightSibling`,
+  `TestCancelAllDropsQueue`, `TestCtrlCOnPromptCancelsAndQuits`,
+  `TestPromptSwallowsOtherKeys`.
+- **Untested**: `renderOverwriteDialog`.
 
 - **Tickets**: fideo-atq.16.
 
