@@ -153,6 +153,9 @@ Tests live beside the code in `internal/fideo` (white-box, `package fideo`).
   (skipped without one); on a GPU host, run it with
   `FIDEO_HW_ENCODER=h264_nvenc` (or `h264_qsv`, `h264_amf`) so it fails rather
   than skips when that encoder isn't the one chosen.
+  `tui_e2e_test.go` builds `./cmd/fideo` and drives the TUI in a fixed-size
+  pseudo-terminal (`github.com/creack/pty`): it waits on drawn text with a
+  deadline, types keys, and checks the `out_` files and the exit code.
 
 - **Local Linux reproduction** — `docker build -f Dockerfile.test -t fideo-test .`
   then `docker run --rm fideo-test`. Runs vet + unit + integration on Linux with

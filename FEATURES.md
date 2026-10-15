@@ -26,8 +26,9 @@ Homebrew), measured 2026-10-15, three runs each:
   cache, 0.6s when cached. The one integration test, `TestEncodeIntegration`,
   takes about 0.2s.
 
-There is no end-to-end harness yet: nothing runs the built `fideo` binary or
-drives the TUI through a pseudo-terminal.
+The end-to-end tests run under the integration tag: `cli_e2e_test.go` runs the
+built `fideo` binary for its help and usage errors, and `tui_e2e_test.go` drives
+the TUI in a pseudo-terminal (`github.com/creack/pty`, a test-only dependency).
 
 ## Command line: flags, validation and exit codes
 
@@ -318,10 +319,13 @@ drives the TUI through a pseudo-terminal.
 ## The whole app in a terminal
 
 - **Reached by**: running `fideo` in a terminal. Code: `Run` in `app.go`.
-- **Tests**: none; there is no pseudo-terminal harness.
-- **Untested**: compressing a lone file (auto-start) and a selected batch to
-  "All done!" with the `out_` files written; `--overwrite` replacing sources;
-  cancelling with `c` leaving no partial output; SIGTERM/SIGINT restoring the
-  terminal, stopping ffmpeg and removing partial outputs (`waitWorkers`).
+- **Tests**: `TestTUIEndToEnd` (`tui_e2e_test.go`, integration tag) builds
+  `./cmd/fideo` and runs it in a 40×120 pseudo-terminal on generated clips: a
+  lone file auto-starts and reaches "All done!" writing `out_clip.mp4`; in a
+  directory of three, space/j/space/enter encodes the two selected and leaves
+  the third alone; `q` quits the picker. Each run then quits with `q`, exit 0.
+- **Untested**: `--overwrite` replacing sources; cancelling with `c` leaving no
+  partial output; SIGTERM/SIGINT restoring the terminal, stopping ffmpeg and
+  removing partial outputs (`waitWorkers`).
 - **Tickets**: fideo-atq.19 (pty harness, happy paths), fideo-atq.20 (cancel
   and signals).
