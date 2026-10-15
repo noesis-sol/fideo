@@ -189,10 +189,12 @@ drives the TUI through a pseudo-terminal.
 - **Untested**:
   - Keys while idle: `space` toggling selection and dropping the output claim,
     `a` selecting every pending file, `enter` starting, `q`/`esc`/`ctrl+c`
-    quitting only when idle, `c` cancelling every in-flight encode.
-  - Worker messages: `handleDone`, `handleError`, `handleCancel` updating
-    counts, releasing the slot, starting the next file and settling the batch
-    as done (with or without errors) or cancelled; `handleProgress`,
+    quitting only when idle, `c` cancelling several in-flight encodes (one
+    is covered by `TestProcessingStartUnderCancelKeepsSlot`).
+  - Worker messages: `handleDone`, `handleError` updating counts, releasing
+    the slot, starting the next file and settling the batch as done (with or
+    without errors); `handleCancel` with several workers and for a file that
+    was processing (one launching worker is covered); `handleProgress`,
     `handleVideoInfo`, `handleOutputInfo`; spinner ticks ignored when idle;
     `autoStartMsg`.
   - Launching work: anything that reaches `startFile` starts a real worker
