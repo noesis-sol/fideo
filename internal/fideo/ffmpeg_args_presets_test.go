@@ -19,9 +19,9 @@ func TestFFmpegArgsSizePresets(t *testing.T) {
 		resolution string
 		filter     string
 	}{
-		{"540", "scale=w='if(gte(iw,ih),-2,2*trunc(min(540,iw)/2))':h='if(gte(iw,ih),2*trunc(min(540,ih)/2),-2)'"},
-		{"1080", "scale=w='if(gte(iw,ih),-2,2*trunc(min(1080,iw)/2))':h='if(gte(iw,ih),2*trunc(min(1080,ih)/2),-2)'"},
-		{"2160", "scale=w='if(gte(iw,ih),-2,2*trunc(min(2160,iw)/2))':h='if(gte(iw,ih),2*trunc(min(2160,ih)/2),-2)'"},
+		{"540", "scale=w='if(gte(iw,ih),-2,max(2,2*trunc(min(540,iw)/2)))':h='if(gte(iw,ih),max(2,2*trunc(min(540,ih)/2)),-2)'"},
+		{"1080", "scale=w='if(gte(iw,ih),-2,max(2,2*trunc(min(1080,iw)/2)))':h='if(gte(iw,ih),max(2,2*trunc(min(1080,ih)/2)),-2)'"},
+		{"2160", "scale=w='if(gte(iw,ih),-2,max(2,2*trunc(min(2160,iw)/2)))':h='if(gte(iw,ih),max(2,2*trunc(min(2160,ih)/2)),-2)'"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.resolution, func(t *testing.T) {

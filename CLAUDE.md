@@ -181,6 +181,9 @@ encode.go (`ffmpegArgs` / `profileFor`).
   forced even — `-2` rounds the derived side, and the `2*trunc(.../2)` wrapper
   rounds the capped side — so an odd-sized 4:2:0 source (where no downscale
   happens) can't reach libx264/yuv420p and abort with "height not divisible by 2".
+  The capped side is floored at 2 (`max(2,...)`): a 1-pixel side would round to
+  0, which the scale filter reads as "keep the input size", so a 64x1 source
+  comes out 128x2 instead of failing.
 - Pixel format: forced to `yuv420p` (8-bit 4:2:0) for every container, so 10-bit
   HDR phone clips, 4:2:2 ProRes, and 4:4:4 screen recordings don't yield High 10 /
   High 4:2:2 profiles that many players and hardware decoders refuse. No

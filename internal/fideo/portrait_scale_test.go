@@ -10,9 +10,9 @@ func TestScaleFilterCapsShortSide(t *testing.T) {
 		size string
 		want string
 	}{
-		{"sm", "scale=w='if(gte(iw,ih),-2,2*trunc(min(540,iw)/2))':h='if(gte(iw,ih),2*trunc(min(540,ih)/2),-2)'"},
-		{"md", "scale=w='if(gte(iw,ih),-2,2*trunc(min(1080,iw)/2))':h='if(gte(iw,ih),2*trunc(min(1080,ih)/2),-2)'"},
-		{"lg", "scale=w='if(gte(iw,ih),-2,2*trunc(min(2160,iw)/2))':h='if(gte(iw,ih),2*trunc(min(2160,ih)/2),-2)'"},
+		{"sm", "scale=w='if(gte(iw,ih),-2,max(2,2*trunc(min(540,iw)/2)))':h='if(gte(iw,ih),max(2,2*trunc(min(540,ih)/2)),-2)'"},
+		{"md", "scale=w='if(gte(iw,ih),-2,max(2,2*trunc(min(1080,iw)/2)))':h='if(gte(iw,ih),max(2,2*trunc(min(1080,ih)/2)),-2)'"},
+		{"lg", "scale=w='if(gte(iw,ih),-2,max(2,2*trunc(min(2160,iw)/2)))':h='if(gte(iw,ih),max(2,2*trunc(min(2160,ih)/2)),-2)'"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.size, func(t *testing.T) {

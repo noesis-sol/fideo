@@ -299,17 +299,20 @@ func (vs *videoService) ffmpegArgs(inputPath, outputPath string, meta videoMetad
 // portrait phone clip (1080x1920) keeps its full width at the 1080 default
 // instead of being squeezed to 608x1080 as a height cap would. A square or
 // landscape source caps its height; a portrait one caps its width. Neither is
-// ever upscaled (min(res,...)).
+// upscaled (min(res,...)), short of the 1-pixel floor below.
 //
 // Both dimensions come out even: the -2 token rounds the derived side, and
 // 2*trunc(.../2) rounds the capped side down to the nearest even value (off by at
 // most one pixel). Without that, an odd source dimension passes straight through
 // when no downscale happens (e.g. a 640x405 source at the 1080 cap) and
-// libx264/yuv420p aborts with "height not divisible by 2". The values are quoted
-// so the commas inside if()/min() aren't read as filtergraph separators.
+// libx264/yuv420p aborts with "height not divisible by 2". The max(2,...) floor
+// covers a 1-pixel short side: rounding it down gives 0, which the scale filter
+// reads as "keep the input size", so the odd 1 would pass through; it is raised
+// to 2 instead (the one case that upscales). The values are quoted so the commas
+// inside if()/min() aren't read as filtergraph separators.
 func scaleFilter(res string) string {
-	w := "if(gte(iw,ih),-2,2*trunc(min(" + res + ",iw)/2))"
-	h := "if(gte(iw,ih),2*trunc(min(" + res + ",ih)/2),-2)"
+	w := "if(gte(iw,ih),-2,max(2,2*trunc(min(" + res + ",iw)/2)))"
+	h := "if(gte(iw,ih),max(2,2*trunc(min(" + res + ",ih)/2)),-2)"
 	return "scale=w='" + w + "':h='" + h + "'"
 }
 

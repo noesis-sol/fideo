@@ -195,7 +195,7 @@ func TestEvenHeightScaleFilter(t *testing.T) {
 		t.Fatalf("no -vf filter in %v", args)
 	}
 	got := args[i+1]
-	want := "scale=w='if(gte(iw,ih),-2,2*trunc(min(1080,iw)/2))':h='if(gte(iw,ih),2*trunc(min(1080,ih)/2),-2)'"
+	want := "scale=w='if(gte(iw,ih),-2,max(2,2*trunc(min(1080,iw)/2)))':h='if(gte(iw,ih),max(2,2*trunc(min(1080,ih)/2)),-2)'"
 	if got != want {
 		t.Errorf("scale filter = %q, want %q (must force even dimensions)", got, want)
 	}
