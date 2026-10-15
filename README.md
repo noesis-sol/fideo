@@ -139,7 +139,8 @@ fideo 'courses/*'
 
 ### Output Size
 
-Control the output resolution with `--size`. It caps the shorter side, so a portrait\nphone clip keeps its width at the cap instead of shrinking to fit it by height:
+Control the output resolution with `--size`. It caps the shorter side, so a portrait
+phone clip keeps its width at the cap instead of shrinking to fit it by height:
 
 | Size | Aliases | Resolution |
 |------|---------|------------|
@@ -155,7 +156,8 @@ fideo --size large --format mkv video.mp4
 # Compresses to 2160p as MKV
 ```
 
-The other side is calculated to preserve the original aspect ratio, and a video\nalready smaller than the cap is never upscaled.
+The other side is calculated to preserve the original aspect ratio, and a video
+already smaller than the cap is never upscaled.
 
 ### Output Format
 
