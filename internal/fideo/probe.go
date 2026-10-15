@@ -35,7 +35,7 @@ func (vs *videoService) probeMetadata(ctx context.Context, path string) (videoMe
 		"-select_streams", "v:0",
 		"-show_entries", "stream=codec_name,width,height,duration:format=bit_rate,duration",
 		"-of", "default=noprint_wrappers=1",
-		path,
+		safeArgPath(path),
 	}
 	// CommandContext (not Command) so a user cancel during the probe phase aborts
 	// ffprobe immediately instead of leaving it running on a slow/large input.

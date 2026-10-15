@@ -39,14 +39,20 @@ type videoFile struct {
 	err      error  // Error for this specific file
 }
 
-// safeArgPath guards a discovered relative path against being misread as a
-// command-line option by tools that take the input as a positional argument
-// (ffprobe parses a leading "-" as a flag, unlike ffmpeg's -i). A relative path
-// beginning with "-" (e.g. "-clip.mp4" found in the current directory) is
-// prefixed with "./" so it is unambiguously a path; absolute paths and paths
-// with a leading directory component are returned unchanged.
+// safeArgPath guards a relative path against being misread by ffmpeg/ffprobe.
+// Both tools take a leading "-" as an option (ffprobe reads its input as a
+// positional argument, unlike ffmpeg's -i), and both parse a "NAME:" prefix made
+// only of URL-scheme characters ([A-Za-z0-9+.-]) as a protocol, so "12:30.mp4"
+// fails with "Protocol not found". A relative path that begins with "-" or whose
+// first element contains ":" is prefixed with "./": the "/" ends the would-be
+// scheme, so the tool opens it as a plain file. Absolute paths, paths with a
+// volume name (Windows), and every other relative path are returned unchanged.
 func safeArgPath(p string) string {
-	if p == "" || filepath.IsAbs(p) || !strings.HasPrefix(p, "-") {
+	if p == "" || filepath.IsAbs(p) || filepath.VolumeName(p) != "" {
+		return p
+	}
+	first, _, _ := strings.Cut(filepath.ToSlash(p), "/")
+	if !strings.HasPrefix(p, "-") && !strings.Contains(first, ":") {
 		return p
 	}
 	return "." + string(filepath.Separator) + p

@@ -196,7 +196,7 @@ func (vs *videoService) ffmpegArgs(inputPath, outputPath string, meta videoMetad
 
 	// Hardware-accelerated decode flags must precede -i to apply to the input.
 	args := decodeArgs(meta, runtime.GOOS)
-	args = append(args, "-i", inputPath)
+	args = append(args, "-i", safeArgPath(inputPath))
 	args = append(args, p.video(vs.config, threads)...)
 	// Force BOTH dimensions even: the -2 token only rounds width, while the height
 	// expression min(res,ih) passes an odd source height straight through when no
@@ -214,7 +214,7 @@ func (vs *videoService) ffmpegArgs(inputPath, outputPath string, meta videoMetad
 	args = append(args, "-pix_fmt", "yuv420p")
 	args = append(args, p.audio(vs.config)...)
 	args = append(args, p.muxFlags...)
-	args = append(args, "-progress", "pipe:1", "-loglevel", "error", "-y", outputPath)
+	args = append(args, "-progress", "pipe:1", "-loglevel", "error", "-y", safeArgPath(outputPath))
 	return args
 }
 
