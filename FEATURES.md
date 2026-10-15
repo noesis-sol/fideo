@@ -63,7 +63,10 @@ drives the TUI through a pseudo-terminal.
 - **Tests** (unit): `fixes_test.go` `TestCollectVideosFromArgLiteralMetachar`
   (a file named `clip[1].mp4` is reached literally and pre-selected),
   `TestCollectVideosFromArgGlobStillWorks`; `inplace_test.go`
-  `TestFindVideosSkipsScratchTemps`.
+  `TestFindVideosSkipsScratchTemps`; `autostart_test.go`
+  `TestAutoStartOnlyForNamedFile` (a lone file is pre-selected, and `Init`
+  auto-starts it only when it was named, not found by a directory scan or a
+  pattern; a file reached by name and through its directory is counted once).
 - **Untested**:
   - `findVideos`: `out_` files skipped when their source exists (same or other
     extension) and kept when it doesn't, upper-case extensions (`.MP4`),
@@ -74,9 +77,7 @@ drives the TUI through a pseudo-terminal.
     malformed pattern.
   - `collectVideosFromArg`: a non-video file refused, a missing path's error, a
     directory argument.
-  - `createModelFromPaths`: the same file reached through a directory and by
-    name counted once, "no video files found" when the paths hold none.
-  - `newModel` auto-selecting a lone file and `Init` auto-starting it.
+  - `createModelFromPaths`: "no video files found" when the paths hold none.
 
 - **Tickets**: fideo-atq.5 (findVideos), fideo-atq.6 (paths, globs, model).
 

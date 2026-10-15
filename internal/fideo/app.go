@@ -129,8 +129,9 @@ func flagValue(args []string, i int, name, inline string, hasInline bool, hint s
 
 // collectVideosFromArg resolves a single CLI argument — a glob pattern, a
 // directory, or a file — into the video files it refers to. An explicitly
-// named file is pre-selected; directories and patterns are left unselected so
-// the user picks them in the TUI (newModel auto-selects when only one results).
+// named file is pre-selected and marked explicit; directories and patterns are
+// left unselected so the user picks them in the TUI (newModel pre-selects a lone
+// result, but only an explicit one auto-starts).
 func collectVideosFromArg(arg string) ([]videoFile, error) {
 	// A real file or directory by this exact name takes precedence over glob
 	// interpretation, so inputs whose names literally contain glob metacharacters
@@ -153,6 +154,7 @@ func collectVideosFromArg(arg string) ([]videoFile, error) {
 			path:     absPath,
 			name:     filepath.Base(arg),
 			selected: true,
+			explicit: true,
 		}}, nil
 	}
 
@@ -168,10 +170,10 @@ func collectVideosFromArg(arg string) ([]videoFile, error) {
 
 // createModelFromPaths merges the videos referenced by every positional
 // argument into one model, deduping by absolute path. A single argument keeps
-// the previous behavior (directory discovery, single-file auto-start).
+// the previous behavior (directory discovery, auto-start of one named file).
 func createModelFromPaths(paths []string) (model, error) {
 	var allFiles []videoFile
-	seen := make(map[string]bool)
+	seen := make(map[string]int) // absolute path -> index in allFiles
 
 	for _, p := range paths {
 		files, err := collectVideosFromArg(p)
@@ -187,10 +189,15 @@ func createModelFromPaths(paths []string) (model, error) {
 			if abs, err := filepath.Abs(f.path); err == nil {
 				key = abs
 			}
-			if seen[key] {
+			if i, ok := seen[key]; ok {
+				// A file also named explicitly stays named (and selected),
+				// whichever argument reached it first.
+				if f.explicit {
+					allFiles[i].selected, allFiles[i].explicit = true, true
+				}
 				continue
 			}
-			seen[key] = true
+			seen[key] = len(allFiles)
 			allFiles = append(allFiles, f)
 		}
 	}

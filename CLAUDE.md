@@ -39,6 +39,8 @@ Fideo is a terminal user interface (TUI) application for compressing video files
 - Optional hardware-accelerated encoding (`--hw`: VideoToolbox/NVENC/QSV/AMF)
 - In-place replacement (`--overwrite`): replace each source with its compressed
   result instead of writing an `out_`-prefixed copy
+- A lone video named on the command line starts at once; one found by scanning
+  a directory or matching a pattern is pre-selected but waits for enter
 - Overwrite prompt (overwrite / skip / cancel) with collision-safe output naming
 - Unknown `-`/`--` options are rejected with a hint; `--` ends option parsing so
   files whose names start with a dash can be named

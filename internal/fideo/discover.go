@@ -31,6 +31,7 @@ type videoFile struct {
 	path     string
 	name     string
 	selected bool
+	explicit bool       // named on the command line, not found by a scan or pattern
 	status   fileStatus // lifecycle state (statusPending is the zero value)
 	progress float64
 	info     string

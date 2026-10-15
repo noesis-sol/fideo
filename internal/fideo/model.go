@@ -91,7 +91,7 @@ func newModel(files []videoFile) model {
 	sp.Spinner = spinner.Dot
 	sp.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("39"))
 
-	// Auto-select if there's only one file.
+	// Pre-select a lone file so enter alone starts it.
 	if len(files) == 1 {
 		files[0].selected = true
 	}
@@ -108,8 +108,10 @@ func newModel(files []videoFile) model {
 }
 
 func (m model) Init() tea.Cmd {
-	// Auto-start if there's only one video file and it's selected.
-	if len(m.files) == 1 && m.files[0].selected {
+	// Auto-start only a lone file the user named on the command line. One found
+	// by scanning a directory or matching a pattern waits for enter, so a bare
+	// `fideo --overwrite` never replaces a file the user didn't name.
+	if len(m.files) == 1 && m.files[0].selected && m.files[0].explicit {
 		return func() tea.Msg {
 			return autoStartMsg{}
 		}
