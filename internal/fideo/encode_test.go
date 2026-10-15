@@ -367,7 +367,7 @@ func TestHWEncoderArgs(t *testing.T) {
 		encoder string
 		want    []string
 	}{
-		{"h264_nvenc", []string{"-c:v", "h264_nvenc", "-cq", "28"}},
+		{"h264_nvenc", []string{"-c:v", "h264_nvenc", "-rc", "vbr", "-cq", "28", "-b:v", "0"}},
 		{"h264_qsv", []string{"-c:v", "h264_qsv", "-global_quality", "28"}},
 		{"h264_amf", []string{"-c:v", "h264_amf", "-rc", "cqp"}},
 		{"h264_videotoolbox", []string{"-c:v", "h264_videotoolbox", "-q:v", "65"}},

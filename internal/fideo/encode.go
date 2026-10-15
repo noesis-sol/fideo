@@ -524,11 +524,13 @@ func (d deviceProbe) drmVendorPresent(vendorID string) bool {
 // hwEncoderArgs returns the video-codec arguments for the resolved hardware
 // encoder. Each encoder exposes a different quality knob: VideoToolbox uses -q:v
 // (0-100, higher = better); NVENC/QSV/AMF use a CRF-like quantizer (0-51, lower =
-// better), for which we reuse the software CRF value.
+// better), for which we reuse the software CRF value. NVENC also needs -b:v 0:
+// its VBR mode otherwise keeps ffmpeg's 2M default as the average-bitrate target,
+// so -cq would be capped by that bitrate rather than acting as constant quality.
 func hwEncoderArgs(c compressionConfig) []string {
 	switch c.hwEncoder {
 	case "h264_nvenc":
-		return []string{"-c:v", "h264_nvenc", "-cq", c.crf}
+		return []string{"-c:v", "h264_nvenc", "-rc", "vbr", "-cq", c.crf, "-b:v", "0"}
 	case "h264_qsv":
 		return []string{"-c:v", "h264_qsv", "-global_quality", c.crf}
 	case "h264_amf":
