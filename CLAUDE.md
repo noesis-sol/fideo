@@ -137,6 +137,9 @@ Tests live beside the code in `internal/fideo` (white-box, `package fideo`).
   without a Bubble Tea program.
   `startFile` launches workers through `model.launch` (nil means `processFile`),
   so the batch handlers are driven with a fake launcher that starts nothing.
+  The missing-ffmpeg dialog copies through a `clipboard` value (OS, PATH lookup,
+  command constructor; `systemClipboard()` in production), so the tool chosen per
+  OS is tested and a stand-in process takes the text instead of the real clipboard.
 
 - **Integration tests** — `go test -tags=integration ./...`. Behind the
   `integration` build tag: they generate a tiny clip, run a real ffmpeg encode end

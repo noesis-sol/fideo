@@ -58,32 +58,60 @@ func getInstallCommand(goos string, lookPath func(string) (string, error)) (osNa
 	}
 }
 
-func copyToClipboard(text string) error {
+// clipboard copies text with the platform's clipboard tool. The target OS, the
+// PATH lookup and the command constructor are fields (systemClipboard fills in
+// runtime.GOOS, exec.LookPath and exec.CommandContext), so tests pick the tool
+// for every OS and run a stand-in without touching the real clipboard. The
+// zero value runs nothing: its empty OS is reported as unsupported.
+type clipboard struct {
+	goos     string
+	lookPath func(string) (string, error)
+	command  func(ctx context.Context, name string, arg ...string) *exec.Cmd
+}
+
+func systemClipboard() clipboard {
+	return clipboard{goos: runtime.GOOS, lookPath: exec.LookPath, command: exec.CommandContext}
+}
+
+// clipboardTool names the clipboard tool for goos and the arguments that make
+// it read the text from stdin. On Linux it takes the first of xclip, xsel and
+// wl-copy that lookPath finds.
+func clipboardTool(goos string, lookPath func(string) (string, error)) (name string, args []string, err error) {
+	switch goos {
+	case "darwin":
+		return "pbcopy", nil, nil
+	case "linux":
+		for _, tool := range []struct {
+			name string
+			args []string
+		}{
+			{"xclip", []string{"-selection", "clipboard"}},
+			{"xsel", []string{"--clipboard", "--input"}},
+			{"wl-copy", nil},
+		} {
+			if _, err := lookPath(tool.name); err == nil {
+				return tool.name, tool.args, nil
+			}
+		}
+		return "", nil, fmt.Errorf("no clipboard utility found (install xclip, xsel, or wl-copy)")
+	case "windows":
+		return "clip", nil, nil
+	default:
+		return "", nil, fmt.Errorf("clipboard not supported on this platform")
+	}
+}
+
+func (c clipboard) copy(text string) error {
+	name, args, err := clipboardTool(c.goos, c.lookPath)
+	if err != nil {
+		return err
+	}
 	// Bound the helper so a wedged clipboard tool (e.g. a stuck wl-copy/xclip)
 	// can't hang forever; copyCmd already runs this off the UI goroutine.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "darwin":
-		cmd = exec.CommandContext(ctx, "pbcopy")
-	case "linux":
-		if _, err := exec.LookPath("xclip"); err == nil {
-			cmd = exec.CommandContext(ctx, "xclip", "-selection", "clipboard")
-		} else if _, err := exec.LookPath("xsel"); err == nil {
-			cmd = exec.CommandContext(ctx, "xsel", "--clipboard", "--input")
-		} else if _, err := exec.LookPath("wl-copy"); err == nil {
-			cmd = exec.CommandContext(ctx, "wl-copy")
-		} else {
-			return fmt.Errorf("no clipboard utility found (install xclip, xsel, or wl-copy)")
-		}
-	case "windows":
-		cmd = exec.CommandContext(ctx, "clip")
-	default:
-		return fmt.Errorf("clipboard not supported on this platform")
-	}
-
+	cmd := c.command(ctx, name, args...)
 	pipe, err := cmd.StdinPipe()
 	if err != nil {
 		return err
@@ -106,11 +134,12 @@ type errorModel struct {
 	command string
 	copied  bool
 	err     string
+	clip    clipboard
 }
 
 func newErrorModel() errorModel {
 	osName, command := getInstallCommand(runtime.GOOS, exec.LookPath)
-	return errorModel{osName: osName, command: command}
+	return errorModel{osName: osName, command: command, clip: systemClipboard()}
 }
 
 func (m errorModel) Init() tea.Cmd { return nil }
@@ -121,9 +150,9 @@ type clipboardResultMsg struct{ err error }
 
 // copyCmd runs the (potentially slow, process-spawning) clipboard copy as a
 // tea.Cmd so it never blocks the Update goroutine, per Bubble Tea's contract.
-func copyCmd(command string) tea.Cmd {
+func copyCmd(clip clipboard, command string) tea.Cmd {
 	return func() tea.Msg {
-		return clipboardResultMsg{err: copyToClipboard(command)}
+		return clipboardResultMsg{err: clip.copy(command)}
 	}
 }
 
@@ -141,7 +170,7 @@ func (m errorModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q", "esc":
 			return m, tea.Quit
 		case "c", "enter":
-			return m, copyCmd(m.command)
+			return m, copyCmd(m.clip, m.command)
 		}
 	}
 	return m, nil

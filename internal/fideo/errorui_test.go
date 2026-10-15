@@ -71,20 +71,34 @@ func TestErrorModelQuitKeys(t *testing.T) {
 	}
 }
 
-// TestErrorModelCopyKeys checks c and enter start the copy. The returned cmd
-// is not run: it would write to the real clipboard.
+// TestErrorModelCopyKeys checks c and enter run the clipboard copy, through a
+// stand-in for the clipboard tool, and report its result.
 func TestErrorModelCopyKeys(t *testing.T) {
 	for _, key := range []tea.KeyMsg{
 		{Type: tea.KeyRunes, Runes: []rune("c")},
 		{Type: tea.KeyEnter},
 	} {
 		t.Run(key.String(), func(t *testing.T) {
-			got, cmd := testErrorModel().Update(key)
+			m := testErrorModel()
+			fake := newFakeClipboardTool(t)
+			m.clip = clipboard{goos: "darwin", lookPath: fakeLookPath(), command: fake.command}
+
+			got, cmd := m.Update(key)
 			if cmd == nil {
 				t.Fatal("cmd = nil, want the clipboard copy")
 			}
 			if m := got.(errorModel); m.copied || m.err != "" {
 				t.Errorf("model changed before the copy finished: %+v", m)
+			}
+			msg, ok := cmd().(clipboardResultMsg)
+			if !ok {
+				t.Fatalf("cmd() = %T, want clipboardResultMsg", msg)
+			}
+			if msg.err != nil {
+				t.Errorf("clipboardResultMsg.err = %v, want nil", msg.err)
+			}
+			if got := fake.received(); got != "brew install ffmpeg" {
+				t.Errorf("clipboard tool received %q, want the install command", got)
 			}
 		})
 	}
@@ -95,7 +109,8 @@ func TestErrorModelOtherKeysIgnored(t *testing.T) {
 	if cmd != nil {
 		t.Error("cmd != nil for an unbound key")
 	}
-	if got.(errorModel) != testErrorModel() {
+	if m, want := got.(errorModel), testErrorModel(); m.osName != want.osName ||
+		m.command != want.command || m.copied != want.copied || m.err != want.err {
 		t.Errorf("model = %+v, want it unchanged", got)
 	}
 }
