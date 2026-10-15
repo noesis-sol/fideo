@@ -76,13 +76,7 @@ func findVideos(dir string) []videoFile {
 		return files
 	}
 
-	entryNames := make(map[string]bool)
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			entryNames[entry.Name()] = true
-		}
-	}
-
+	sources := videoStems(entries)
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
@@ -94,29 +88,16 @@ func findVideos(dir string) []videoFile {
 			continue
 		}
 
-		// Ignore scratch temps a crashed in-place encode may have left behind.
-		if strings.Contains(name, tempOutputMarker) {
+		// Skip hidden files: macOS AppleDouble "._clip.mov" sidecars (left on
+		// exFAT camera cards and SMB shares, never a playable video) and the
+		// scratch temps a crashed in-place encode may have left behind.
+		if isHidden(name) || strings.Contains(name, tempOutputMarker) {
 			continue
 		}
 
-		// Skip output files only if a corresponding source file exists.
-		if strings.HasPrefix(name, outputPrefix) {
-			sourceName := strings.TrimPrefix(name, outputPrefix)
-			if entryNames[sourceName] {
-				continue
-			}
-			// Also check if source exists with a different extension (format conversion).
-			sourceBase := strings.TrimSuffix(sourceName, filepath.Ext(sourceName))
-			hasSource := false
-			for srcExt := range videoExtensions {
-				if entryNames[sourceBase+srcExt] {
-					hasSource = true
-					break
-				}
-			}
-			if hasSource {
-				continue
-			}
+		// Skip fideo's own outputs, but only if a corresponding source exists.
+		if isOwnOutput(name, sources) {
+			continue
 		}
 
 		files = append(files, videoFile{
@@ -125,6 +106,73 @@ func findVideos(dir string) []videoFile {
 		})
 	}
 	return files
+}
+
+// isHidden reports whether a file name is a dotfile, which a directory scan
+// skips the way a shell's "*" does.
+func isHidden(name string) bool {
+	return strings.HasPrefix(name, ".")
+}
+
+// videoStems maps the stem of every video file among entries to the set of its
+// lowercased extensions (e.g. "clip" -> {".mov", ".mp4"}).
+func videoStems(entries []os.DirEntry) map[string]map[string]bool {
+	stems := make(map[string]map[string]bool)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		ext := filepath.Ext(name)
+		if !videoExtensions[strings.ToLower(ext)] {
+			continue
+		}
+		stem := strings.TrimSuffix(name, ext)
+		if stems[stem] == nil {
+			stems[stem] = make(map[string]bool)
+		}
+		stems[stem][strings.ToLower(ext)] = true
+	}
+	return stems
+}
+
+// isOwnOutput reports whether name is an output fideo would write for one of
+// the videos in sources (see videoStems): out_<stem>.<ext> (getOutputPath),
+// or one resolveOutputPath disambiguated within a batch, out_<stem>_<srcext>.<ext>
+// or out_<stem>-<n>.<ext>. An out_ file whose source is gone is not one, so
+// it can still be listed and compressed.
+func isOwnOutput(name string, sources map[string]map[string]bool) bool {
+	rest, ok := strings.CutPrefix(name, outputPrefix)
+	if !ok {
+		return false
+	}
+	stem := strings.TrimSuffix(rest, filepath.Ext(rest))
+	if len(sources[stem]) > 0 {
+		return true
+	}
+	if i := strings.LastIndex(stem, "_"); i >= 0 {
+		if srcExt := "." + stem[i+1:]; videoExtensions[srcExt] && sources[stem[:i]][srcExt] {
+			return true
+		}
+	}
+	if i := strings.LastIndex(stem, "-"); i >= 0 && isCounter(stem[i+1:]) {
+		return len(sources[stem[:i]]) > 0
+	}
+	return false
+}
+
+// isCounter reports whether s is a positive decimal counter, as
+// resolveOutputPath appends ("1", "2", ...).
+func isCounter(s string) bool {
+	if s == "" || s[0] == '0' {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func collectVideosFromPattern(pattern string) ([]videoFile, error) {
@@ -157,6 +205,11 @@ func collectVideosFromPattern(pattern string) ([]videoFile, error) {
 
 		ext := strings.ToLower(filepath.Ext(match))
 		if !videoExtensions[ext] {
+			continue
+		}
+		// Like a shell, "*" doesn't reach dotfiles (AppleDouble "._clip.mov"
+		// sidecars): only a pattern whose last element starts with "." does.
+		if isHidden(filepath.Base(match)) && !isHidden(filepath.Base(pattern)) {
 			continue
 		}
 		absPath, err := filepath.Abs(match)

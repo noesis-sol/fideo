@@ -67,7 +67,12 @@ drives the TUI through a pseudo-terminal.
 - **Tests** (unit): `fixes_test.go` `TestCollectVideosFromArgLiteralMetachar`
   (a file named `clip[1].mp4` is reached literally and pre-selected),
   `TestCollectVideosFromArgGlobStillWorks`; `inplace_test.go`
-  `TestFindVideosSkipsScratchTemps`; `autostart_test.go`
+  `TestFindVideosSkipsScratchTemps`; `discover_skip_test.go`
+  `TestFindVideosSkipsHiddenAndOwnOutputs` (dotfiles such as AppleDouble `._`
+  sidecars, and `out_` outputs beside their source, including the batch's
+  disambiguated `out_<stem>_<srcext>` / `out_<stem>-<n>` names, are skipped),
+  `TestCollectVideosFromPatternSkipsDotfiles` (`*` doesn't reach dotfiles,
+  `._*` does); `autostart_test.go`
   `TestAutoStartOnlyForNamedFile` (a lone file is pre-selected, and `Init`
   auto-starts it only when it was named, not found by a directory scan or a
   pattern; a file reached by name and through its directory is counted once).

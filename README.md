@@ -315,6 +315,7 @@ go build -o fideo main.go && mv fideo ~/.local/bin/fideo
 ## 💡 Tips
 
 - Output files are automatically prefixed with `out_` to avoid overwriting originals
+- A directory scan skips hidden files (such as the `._` sidecars macOS leaves on camera cards and network shares) and fideo's own `out_` outputs whose source sits beside them, so running `fideo` again doesn't re-compress them
 - If an output file already exists, you'll be prompted with options to overwrite, skip, or cancel
 - With `--overwrite`, a file whose re-encode comes out no smaller than the original is left untouched, and its row says so
 - With `--overwrite`, a replaced file keeps the original's permissions and modification time
