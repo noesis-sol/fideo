@@ -141,23 +141,26 @@ drives the TUI through a pseudo-terminal.
 
 ## Hardware encoder selection
 
-- **Reached by**: `fideo --hw`. Code: `resolveHWEncoder`, `probeEncode`,
-  `lavfiProbeUsable`, `hwEncoderCandidates`, `orderByDevicePresence`,
-  `deviceProbe` in `encode.go`.
+- **Reached by**: `fideo --hw`. Code: `resolveHWEncoder`, `hwResolver`,
+  `probeEncode`, `lavfiProbeUsable`, `hwEncoderCandidates`,
+  `orderByDevicePresence`, `deviceProbe` in `encode.go`.
 - **Tests** (unit): `platform_test.go` `TestHWEncoderCandidatesPerOS`,
   `TestDeviceProbeAvailable` (synthetic `/dev` and `/sys` trees),
   `TestOrderByDevicePresence`; `hw_probe_test.go`
   `TestProbeArgsRequestOutputPixFmt` (the probe asks for the encode's
-  `-pix_fmt`). (integration, on the host's own encoder, skipped without one):
+  `-pix_fmt`); `hw_resolve_test.go` `TestHWResolverChoice` (the encoder
+  choice, with a stand-in encoder listing, probe and lavfi check: no
+  compiled-in encoder, the listing failing, a probe that succeeds, one that
+  fails so the next is tried, one that times out and is used without probing
+  further, every probe failing with and without a usable lavfi source),
+  `TestHWResolverDarwinNamesVideoToolbox`, `TestHostHWResolverUsesRealProbes`.
+  (integration, on the host's own encoder, skipped without one):
   `hw_encode_integration_test.go` `TestHWEncodeIntegration` (8-bit, 4:4:4 and
   10-bit sources come out yuv420p H.264), `TestHWQualityIntegration` (the
   quality knob moves the size and isn't held to a bitrate target).
   `FIDEO_HW_ENCODER=h264_nvenc` (or another) makes them fail, not skip, unless
   that encoder is chosen.
-- **Untested**: `resolveHWEncoder`'s choice, which execs ffmpeg directly: no
-  compiled-in encoder, a probe that succeeds, one that fails so the next is
-  tried, one that times out and is used anyway, every probe failing with and
-  without a usable lavfi source. The integration tests have run only on
+- **Untested**: the integration tests have run only on
   VideoToolbox: NVENC, QSV and AMF need a host with that GPU, which CI lacks
   (ticket fideo-8ip).
 

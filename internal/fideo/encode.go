@@ -366,29 +366,52 @@ func hwEncoderCandidates(goos string) []string {
 	return []string{"h264_nvenc", "h264_qsv", "h264_amf"}
 }
 
-// resolveHWEncoder picks a platform-appropriate hardware encoder. It first
-// narrows the candidates to those ffmpeg was compiled with, then prefers one
-// whose matching GPU device is actually present — so a build that bundles e.g.
-// h264_nvenc on a non-NVIDIA machine doesn't shadow the GPU that's really there.
-// If the device probe finds no match (or can't see device nodes, e.g. inside a
-// container), it falls back to the first compiled-in encoder and lets ffmpeg
-// surface any device error per file rather than guessing wrong here.
-func resolveHWEncoder() (string, error) {
-	candidates := hwEncoderCandidates(runtime.GOOS)
-	out, err := exec.Command("ffmpeg", "-hide_banner", "-encoders").Output()
-	if err != nil {
-		return "", fmt.Errorf("could not query ffmpeg encoders: %w", err)
-	}
-	available := string(out)
+// hwResolver holds what resolveHWEncoder consults about the host: its OS, the
+// ffmpeg encoder listing, the probe-encode, the lavfi harness check and the GPU
+// device probe. They are fields — rather than direct runtime.GOOS reads and
+// ffmpeg execs — so the encoder choice can be unit-tested with stand-ins.
+type hwResolver struct {
+	goos        string
+	encoders    func() (string, error)
+	probe       func(codec string) probeResult
+	lavfiUsable func() bool
+	devices     deviceProbe
+}
 
-	var compiled []string
-	for _, enc := range candidates {
-		if strings.Contains(available, enc) {
-			compiled = append(compiled, enc)
-		}
+// hostHWResolver resolves against the real ffmpeg and the running system.
+func hostHWResolver() hwResolver {
+	return hwResolver{
+		goos:        runtime.GOOS,
+		encoders:    listFFmpegEncoders,
+		probe:       probeEncode,
+		lavfiUsable: lavfiProbeUsable,
+		devices:     hostDeviceProbe(),
 	}
-	if len(compiled) == 0 {
-		return "", fmt.Errorf("no hardware H.264 encoder available in this ffmpeg build (looked for: %s)", strings.Join(candidates, ", "))
+}
+
+// listFFmpegEncoders returns ffmpeg's encoder listing (ffmpeg -encoders).
+func listFFmpegEncoders() (string, error) {
+	out, err := exec.Command("ffmpeg", "-hide_banner", "-encoders").Output()
+	return string(out), err
+}
+
+// resolveHWEncoder picks a platform-appropriate hardware encoder on this host;
+// see hwResolver.resolve.
+func resolveHWEncoder() (string, error) {
+	return hostHWResolver().resolve()
+}
+
+// resolve picks a platform-appropriate hardware encoder. It first narrows the
+// candidates to those ffmpeg was compiled with, then prefers one whose matching
+// GPU device is actually present — so a build that bundles e.g. h264_nvenc on a
+// non-NVIDIA machine doesn't shadow the GPU that's really there. If the device
+// probe finds no match (or can't see device nodes, e.g. inside a container), it
+// falls back to the first compiled-in encoder and lets ffmpeg surface any device
+// error per file rather than guessing wrong here.
+func (r hwResolver) resolve() (string, error) {
+	compiled, err := r.compiledCandidates()
+	if err != nil {
+		return "", err
 	}
 
 	// A compiled-in encoder plus a matching GPU node is necessary but NOT
@@ -398,9 +421,9 @@ func resolveHWEncoder() (string, error) {
 	// ordering; the gate is a best-effort probe-encode that tries to initialize
 	// the encoder. We return the first candidate that encodes a few frames
 	// without error, so a wrong guess can't make every real file fail.
-	ordered := orderByDevicePresence(compiled, hostDeviceProbe())
+	ordered := orderByDevicePresence(compiled, r.devices)
 	for _, enc := range ordered {
-		switch probeEncode(enc) {
+		switch r.probe(enc) {
 		case probeOK:
 			return enc, nil
 		case probeTimedOut:
@@ -418,10 +441,32 @@ func resolveHWEncoder() (string, error) {
 	// stripped ffmpeg without the lavfi color source), the probes false-negative
 	// every encoder — so don't force software. Fall back to the device-presence
 	// heuristic (ordered[0]) and let any real per-file error surface.
-	if !lavfiProbeUsable() {
+	if !r.lavfiUsable() {
 		return ordered[0], nil
 	}
 	return "", fmt.Errorf("hardware encoder(s) %s are in this ffmpeg build but none could be initialized on this system", strings.Join(compiled, ", "))
+}
+
+// compiledCandidates returns the platform's candidate encoders that ffmpeg's
+// encoder listing includes, in preference order, or an error when the listing
+// can't be read or names none of them.
+func (r hwResolver) compiledCandidates() ([]string, error) {
+	candidates := hwEncoderCandidates(r.goos)
+	available, err := r.encoders()
+	if err != nil {
+		return nil, fmt.Errorf("could not query ffmpeg encoders: %w", err)
+	}
+
+	var compiled []string
+	for _, enc := range candidates {
+		if strings.Contains(available, enc) {
+			compiled = append(compiled, enc)
+		}
+	}
+	if len(compiled) == 0 {
+		return nil, fmt.Errorf("no hardware H.264 encoder available in this ffmpeg build (looked for: %s)", strings.Join(candidates, ", "))
+	}
+	return compiled, nil
 }
 
 // orderByDevicePresence puts encoders whose backing GPU node is detectable

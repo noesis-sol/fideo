@@ -123,6 +123,10 @@ Tests live beside the code in `internal/fideo` (white-box, `package fideo`).
   - `deviceProbe{goos, root}` points the Linux GPU-node probe at a synthetic
     `/dev` + `/sys` tree under a temp dir, so NVENC/QSV/AMF detection is tested
     without a real GPU or a Linux host.
+  - `hwResolver{goos, encoders, probe, lavfiUsable, devices}` carries the
+    `ffmpeg -encoders` listing, the probe-encode and the lavfi check that
+    `--hw` resolution consults (`hostHWResolver()` in production), so the
+    encoder choice is tested with stand-ins instead of a real ffmpeg.
 
   When adding OS- or filesystem-dependent behavior, thread the dependency in the
   same way instead of calling `runtime.GOOS` / `os` directly — keep it
