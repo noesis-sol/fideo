@@ -240,12 +240,12 @@ func containerOf(outputPath string) string {
 	return strings.ToLower(strings.TrimPrefix(filepath.Ext(outputPath), "."))
 }
 
-// ffmpegArgs assembles the full ffmpeg argument list for one encode. It is a
-// pure function of its inputs (no exec, no process), so the command can be
-// unit-tested in isolation; buildFFmpegCommand only wraps it in an *exec.Cmd.
 // outputPixFmt is the pixel format every encode asks for (see ffmpegArgs).
 const outputPixFmt = "yuv420p"
 
+// ffmpegArgs assembles the full ffmpeg argument list for one encode. It is a
+// pure function of its inputs (no exec, no process), so the command can be
+// unit-tested in isolation; buildFFmpegCommand only wraps it in an *exec.Cmd.
 func (vs *videoService) ffmpegArgs(inputPath, outputPath string, meta videoMetadata, jobs int) []string {
 	p := profileFor(containerOf(outputPath))
 
