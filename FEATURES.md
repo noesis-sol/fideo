@@ -33,11 +33,15 @@ the TUI in a pseudo-terminal (`github.com/creack/pty`, a test-only dependency).
 ## Command line: flags, validation and exit codes
 
 - **Reached by**: `fideo [--format mp4|mov|mkv|webm] [--size sm|md|lg] [--hw]
-  [--overwrite] [--] [path|pattern ...]`, `fideo --help` / `-h`.
+  [--overwrite] [--] [path|pattern ...]`, `fideo --help` / `-h`,
+  `fideo --version`.
   Code: `parseArgs`, `flagValue`, `buildConfig`, `applyHW`, `Run` in
-  `app.go`; `validFormats`, `validSizes` in `config.go`.
-- **Tests** (unit): `app_test.go` `TestParseArgs` (flags in any order, inline
-  and separate values, `--help`/`-h`, unknown options rejected, boolean flag
+  `app.go`; `versionString` in `version.go`; `validFormats`, `validSizes` in
+  `config.go`.
+- **Tests** (unit): `version_test.go` `TestVersionString` (tagged, pseudo,
+  `+dirty`, `(devel)` and missing build info);
+  `app_test.go` `TestParseArgs` (flags in any order, inline
+  and separate values, `--help`/`-h`, `--version`/`-version`, unknown options rejected, boolean flag
   with a value rejected, `--` passes dashed names, missing and empty values);
   `inplace_test.go` `TestParseArgsOverwrite`; `cli_config_test.go` (what `Run`
   decides after parsing, via `buildConfig` and `applyHW`: `--format`
@@ -49,18 +53,19 @@ the TUI in a pseudo-terminal (`github.com/creack/pty`, a test-only dependency).
   `-size`, `-hw`).
 - **Tests** (integration, the built binary): `cli_e2e_test.go`
   `TestCLIEndToEnd` builds `./cmd/fideo` and runs it with stub
-  ffmpeg/ffprobe on PATH: `--help`/`-h` print usage and exit 0, an unknown
+  ffmpeg/ffprobe on PATH: `--help`/`-h` print usage and exit 0, `--version`
+  prints `fideo <version>` and exits 0 (also with a path), an unknown
   option or a flag missing its value exits 1 with "Run 'fideo --help' for
   usage.", `--format bogus`, `--size bogus` and `--hw --format webm` exit 1
   with their hints, a missing path, a non-video file, an empty directory and
   a pattern with no match exit 1 with their messages; and with no ffmpeg on
-  PATH, `--help` and an unknown option still work.
+  PATH, `--help`, `--version` and an unknown option still work.
   `option_errors_without_ffmpeg_test.go` `TestOptionErrorsWithoutFFmpeg`: with
   no ffmpeg on PATH, `--format foo`, `--size bogus` and `--hw --format webm`
   still exit 1 with their usage errors, not the install dialog.
 
 - **Tickets**: fideo-atq.3 (Run's checks, unit), fideo-atq.4 (the binary),
-  fideo-a1u (option errors before the dependency check).
+  fideo-a1u (option errors before the dependency check), fideo-ale (`--version`).
 
 ## Finding the videos
 

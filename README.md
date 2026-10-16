@@ -44,11 +44,13 @@ Processing... (c or ctrl+c to cancel)
 
 ```bash
 # Clone the repository
-git clone <your-repo-url>
-cd compress-tui
+git clone https://github.com/noesis-sol/fideo.git
+cd fideo
 
-# Build the binary (dependencies download automatically)
-go build -o fideo main.go
+# Build the binary (dependencies download automatically). Check out a release
+# tag first (git checkout v1.1.0) to build that release; `fideo --version`
+# reports the tag, or a pseudo-version past it, read from git at build time.
+go build -o fideo ./cmd/fideo
 
 # Move to your PATH (optional)
 mv fideo ~/.local/bin/fideo
@@ -79,6 +81,9 @@ fideo /path/to/videos --format mov
 # Compress to a specific size
 fideo --size sm video.mp4
 fideo --size large /path/to/videos
+
+# Show which version you have
+fideo --version
 
 # Let the GPU do the heavy lifting (auto-detects the right encoder)
 fideo --hw video.mov

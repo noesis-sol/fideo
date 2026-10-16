@@ -42,6 +42,9 @@ Fideo is a terminal user interface (TUI) application for compressing video files
 - A lone video named on the command line starts at once; one found by scanning
   a directory or matching a pattern is pre-selected but waits for enter
 - Overwrite prompt (overwrite / skip / cancel) with collision-safe output naming
+- `--version` prints the version Go stamps from git at build time (the tag at a
+  tagged commit, a pseudo-version past it, `+dirty` with uncommitted changes;
+  `versionString` in version.go), so a release needs no `-ldflags` step
 - Unknown `-`/`--` options are rejected with a hint; `--` ends option parsing so
   files whose names start with a dash can be named
 

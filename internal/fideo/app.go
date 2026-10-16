@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"syscall"
 
@@ -35,6 +36,7 @@ Options:
   --overwrite      Replace each source file with its compressed result (no out_ prefix)
   --               Treat every following argument as a path (for names starting with -)
   --help, -h       Show this help message
+  --version        Show the fideo version
 
 Examples:
   fideo                       Compress videos in current directory
@@ -58,11 +60,13 @@ type cliOptions struct {
 	hw        bool
 	overwrite bool
 	help      bool
+	version   bool
 }
 
-// parseArgs extracts the --format, --size, --hw, --overwrite and --help flags
-// and the positional paths from args, in any order, so shell-expanded wildcards
-// (e.g. */videos/*.mp4) just work without quoting. Anything else that starts
+// parseArgs extracts the --format, --size, --hw, --overwrite, --help and
+// --version flags and the positional paths from args, in any order, so
+// shell-expanded wildcards (e.g. */videos/*.mp4) just work without quoting.
+// Anything else that starts
 // with "-" is an unknown option and is rejected — silently trying it as a file
 // name used to surface as a baffling "stat --verbose: no such file". A "--"
 // ends option parsing so a file whose name begins with "-" can still be named.
@@ -90,7 +94,7 @@ func parseArgs(args []string) (cliOptions, error) {
 				return o, err
 			}
 			o.size, i = val, i+skip
-		case "--hw", "-hw", "--overwrite", "-overwrite", "--help", "-h":
+		case "--hw", "-hw", "--overwrite", "-overwrite", "--help", "-h", "--version", "-version":
 			if hasInline {
 				return o, fmt.Errorf("option %s takes no value", name)
 			}
@@ -99,6 +103,8 @@ func parseArgs(args []string) (cliOptions, error) {
 				o.hw = true
 			case "--overwrite", "-overwrite":
 				o.overwrite = true
+			case "--version", "-version":
+				o.version = true
 			default:
 				o.help = true
 			}
@@ -311,6 +317,10 @@ func Run() {
 		fmt.Print(usageText)
 		os.Exit(0)
 	}
+	if opts.version {
+		fmt.Println("fideo", versionString(debug.ReadBuildInfo()))
+		os.Exit(0)
+	}
 
 	cfg, err := buildConfig(opts, defaultConfig)
 	if err != nil {
@@ -318,8 +328,8 @@ func Run() {
 		os.Exit(1)
 	}
 
-	// Dependencies are checked only once the command line is valid, so --help
-	// and usage errors, bad --format/--size/--hw values included, work on a
+	// Dependencies are checked only once the command line is valid, so --help,
+	// --version and usage errors, bad --format/--size/--hw values included, work on a
 	// machine that has no ffmpeg yet.
 	if err := checkDependencies(); err != nil {
 		displayInstallationHelp()

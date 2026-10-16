@@ -107,6 +107,8 @@ func testCLIWithFFmpeg(t *testing.T, bin string) {
 		{"--help", []string{"--help"}, 0, []string{"Usage: fideo [options]", "--format <fmt>", "Examples:"}, nil},
 		{"-h", []string{"-h"}, 0, []string{"Usage: fideo [options]"}, nil},
 		{"help wins over paths", []string{"missing.mp4", "--help"}, 0, []string{"Usage: fideo [options]"}, nil},
+		{"--version", []string{"--version"}, 0, []string{"fideo "}, nil},
+		{"version wins over paths", []string{"missing.mp4", "--version"}, 0, []string{"fideo "}, nil},
 		{"unknown option", []string{"--verbose"}, 1, nil,
 			[]string{`Error: unknown option "--verbose"`, usageHint}},
 		{"missing flag value", []string{"--format"}, 1, nil,
@@ -140,13 +142,16 @@ func testCLIWithFFmpeg(t *testing.T, bin string) {
 	}
 }
 
-// testCLIWithoutFFmpeg pins that --help and usage errors don't need ffmpeg:
-// they are handled before the dependency check, whose help dialog is a TUI.
+// testCLIWithoutFFmpeg pins that --help, --version and usage errors don't need
+// ffmpeg: they are handled before the dependency check, whose help dialog is a TUI.
 func testCLIWithoutFFmpeg(t *testing.T, bin string) {
 	noTools := t.TempDir()
 
 	got := runFideo(t, bin, t.TempDir(), noTools, "--help")
 	checkCLIResult(t, got, 0, []string{"Usage: fideo [options]"}, nil)
+
+	got = runFideo(t, bin, t.TempDir(), noTools, "--version")
+	checkCLIResult(t, got, 0, []string{"fideo "}, nil)
 
 	got = runFideo(t, bin, t.TempDir(), noTools, "--bogus")
 	checkCLIResult(t, got, 1, nil, []string{`unknown option "--bogus"`, "Run 'fideo --help' for usage."})
